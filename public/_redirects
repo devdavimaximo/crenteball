@@ -1,0 +1,3 @@
+# SPA fallback. Without this, reloading the page on any route other than "/"
+# returns a 404 from the CDN, because no file exists at that path.
+/*  /index.html  200

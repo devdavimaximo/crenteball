@@ -8,4 +8,10 @@
 export const ptBR = {
   'boot.milestone': 'M0',
   'boot.tagline': 'Fundação técnica no lugar. O núcleo do jogo começa no M1.',
+
+  'pwa.offlineReady': 'Pronto para jogar sem internet.',
+  'pwa.updateReady': 'Nova versão disponível.',
+  'pwa.update': 'Atualizar',
+  'pwa.dismiss': 'Agora não',
+  'pwa.close': 'Fechar aviso',
 } as const;

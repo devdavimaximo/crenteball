@@ -1,4 +1,5 @@
 import { GAME_NAME, GAME_VERSION } from '@/engine/meta';
+import { ServiceWorkerPrompt } from '@/ui/components/ServiceWorkerPrompt';
 import { t } from '@/ui/i18n';
 
 export function App() {
@@ -12,6 +13,8 @@ export function App() {
       <code className="mt-4 rounded-full bg-white/5 px-3 py-1 text-xs text-white/40">
         v{GAME_VERSION}
       </code>
+
+      <ServiceWorkerPrompt />
     </main>
   );
 }
