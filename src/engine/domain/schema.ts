@@ -14,6 +14,7 @@ import { z } from 'zod';
 import { DEVOTION_MAX, DEVOTION_MIN } from '@/engine/balance/career';
 
 import { ATTRIBUTE_KEYS, ATTRIBUTE_MAX, ATTRIBUTE_MIN } from './attributes';
+import { fromCents } from './money';
 import { POSITIONS } from './state';
 
 const uint32 = z.number().int().min(0).max(0xffffffff);
@@ -22,8 +23,16 @@ const percentage = z.number().int().min(0).max(100);
 
 const rating = z.number().int().min(ATTRIBUTE_MIN).max(ATTRIBUTE_MAX);
 
-/** Money is always whole cents — the schema is where that rule is enforced. */
-const money = z.number().int();
+/**
+ * Money is always whole cents — the schema is where that rule is enforced,
+ * and also where the `Money` brand is restored: JSON carries plain numbers,
+ * so anything crossing this boundary re-earns the brand by passing the
+ * integer check.
+ */
+const money = z
+  .number()
+  .int()
+  .transform((cents) => fromCents(cents));
 
 const attributesSchema = z.object(
   Object.fromEntries(ATTRIBUTE_KEYS.map((key) => [key, rating])) as Record<
