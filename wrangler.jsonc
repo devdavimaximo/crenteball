@@ -1,0 +1,22 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "crenteball",
+  "compatibility_date": "2026-07-21",
+
+  // Static assets only — there is no Worker script. The whole game runs in the
+  // browser, so the edge does nothing but serve files (see README.md).
+  "assets": {
+    "directory": "./dist",
+
+    // SPA fallback. Any path that does not match a file is served index.html
+    // with a 200, so reloading on a route like /carreira works.
+    //
+    // This replaces the classic Pages `_redirects` catch-all, which the
+    // Workers asset pipeline rejects as an infinite redirect loop.
+    "not_found_handling": "single-page-application"
+  },
+
+  "observability": {
+    "enabled": true
+  }
+}
