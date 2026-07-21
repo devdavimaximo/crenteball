@@ -1,0 +1,67 @@
+# =============================================================================
+# Crenteball
+# =============================================================================
+
+# --- Local, nunca versionado -------------------------------------------------
+# Diretorios ocultos na raiz sao configuracao de ferramenta/editor da maquina.
+/.*/
+!/.github/
+
+# Politica de markdown: o unico .md versionado e o README.md, em qualquer nivel.
+# Todo o resto (notas, rascunhos, documentos de trabalho) fica local.
+*.md
+!README.md
+docs/
+notes/
+
+# --- Dependencias ------------------------------------------------------------
+node_modules/
+.npm/
+*.tgz
+
+# --- Build e caches ----------------------------------------------------------
+dist/
+dist-ssr/
+.vite/
+*.tsbuildinfo
+node_modules/.tmp/
+
+# Gerado pelo vite-plugin-pwa em modo dev (service worker + manifest)
+dev-dist/
+
+# --- Testes ------------------------------------------------------------------
+coverage/
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# --- Saves locais ------------------------------------------------------------
+# Saves exportados durante o desenvolvimento sao dados de jogo pessoais.
+# As fixtures usadas no teste de migration SAO versionadas — dai a excecao.
+*.crenteball
+!src/**/__fixtures__/**/*.crenteball
+
+# --- Ambiente e segredos -----------------------------------------------------
+.env
+.env.*
+!.env.example
+*.local
+
+# --- Deploy (Cloudflare Pages) -----------------------------------------------
+.wrangler/
+.dev.vars
+
+# --- Editores ----------------------------------------------------------------
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# --- Sistema operacional -----------------------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini

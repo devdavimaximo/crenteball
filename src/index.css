@@ -1,0 +1,32 @@
+@import 'tailwindcss';
+
+/* Theme tokens. Kept here rather than scattered across components so the
+   game's visual identity can change in one place. */
+@theme {
+  --color-relva-50: #eefbf3;
+  --color-relva-300: #7ddba4;
+  --color-relva-500: #22a75c;
+  --color-relva-700: #12703d;
+  --color-relva-900: #0a3d22;
+
+  --color-noite-700: #16203a;
+  --color-noite-800: #101830;
+  --color-noite-900: #0b1220;
+  --color-noite-950: #060a14;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  /* Mobile-first: this game is played on a phone, with a thumb. */
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+}
