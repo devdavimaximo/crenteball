@@ -1,0 +1,208 @@
+{
+  "id": "liga-brasil",
+  "name": "Liga Brasil",
+  "country": "Brasil",
+  "tier": 1,
+  "clubs": [
+    {
+      "id": "atletico-guanabara",
+      "name": "Atlético Guanabara",
+      "shortName": "AGU",
+      "city": "Rio de Janeiro",
+      "colours": { "primary": "#c8102e", "secondary": "#101010" },
+      "reputation": 88,
+      "budget": 240000000,
+      "stadiumCapacity": 68000
+    },
+    {
+      "id": "sociedade-ipiranga",
+      "name": "Sociedade Ipiranga",
+      "shortName": "IPI",
+      "city": "São Paulo",
+      "colours": { "primary": "#0b3d91", "secondary": "#f2f2f2" },
+      "reputation": 86,
+      "budget": 225000000,
+      "stadiumCapacity": 62000
+    },
+    {
+      "id": "gremio-pampa",
+      "name": "Grêmio Pampa",
+      "shortName": "PAM",
+      "city": "Porto Alegre",
+      "colours": { "primary": "#1c6ba4", "secondary": "#0d0d0d" },
+      "reputation": 82,
+      "budget": 190000000,
+      "stadiumCapacity": 55000
+    },
+    {
+      "id": "minas-esporte",
+      "name": "Minas Esporte Clube",
+      "shortName": "MEC",
+      "city": "Belo Horizonte",
+      "colours": { "primary": "#f5b301", "secondary": "#0a3d62" },
+      "reputation": 80,
+      "budget": 175000000,
+      "stadiumCapacity": 58000
+    },
+    {
+      "id": "salvador-atlantico",
+      "name": "Salvador Atlântico",
+      "shortName": "SAT",
+      "city": "Salvador",
+      "colours": { "primary": "#0f8a5f", "secondary": "#f2f2f2" },
+      "reputation": 74,
+      "budget": 132000000,
+      "stadiumCapacity": 48000
+    },
+    {
+      "id": "curitiba-ferroviario",
+      "name": "Curitiba Ferroviário",
+      "shortName": "CFE",
+      "city": "Curitiba",
+      "colours": { "primary": "#7a1f2b", "secondary": "#e8e8e8" },
+      "reputation": 71,
+      "budget": 118000000,
+      "stadiumCapacity": 42000
+    },
+    {
+      "id": "recife-maritimo",
+      "name": "Recife Marítimo",
+      "shortName": "RMA",
+      "city": "Recife",
+      "colours": { "primary": "#c1272d", "secondary": "#1b2a49" },
+      "reputation": 69,
+      "budget": 104000000,
+      "stadiumCapacity": 40000
+    },
+    {
+      "id": "baixada-santista",
+      "name": "Baixada Santista FC",
+      "shortName": "BSA",
+      "city": "Santos",
+      "colours": { "primary": "#111111", "secondary": "#f5f5f5" },
+      "reputation": 67,
+      "budget": 96000000,
+      "stadiumCapacity": 26000
+    },
+    {
+      "id": "clube-do-cerrado",
+      "name": "Clube do Cerrado",
+      "shortName": "CER",
+      "city": "Brasília",
+      "colours": { "primary": "#1f6f3d", "secondary": "#f7d31c" },
+      "reputation": 63,
+      "budget": 82000000,
+      "stadiumCapacity": 44000
+    },
+    {
+      "id": "campinas-metropolitano",
+      "name": "Campinas Metropolitano",
+      "shortName": "CMP",
+      "city": "Campinas",
+      "colours": { "primary": "#2b5cab", "secondary": "#ffffff" },
+      "reputation": 60,
+      "budget": 71000000,
+      "stadiumCapacity": 31000
+    },
+    {
+      "id": "litoral-cearense",
+      "name": "Litoral Cearense",
+      "shortName": "LCE",
+      "city": "Fortaleza",
+      "colours": { "primary": "#0a4d8c", "secondary": "#f0a500" },
+      "reputation": 58,
+      "budget": 64000000,
+      "stadiumCapacity": 38000
+    },
+    {
+      "id": "goiania-central",
+      "name": "Goiânia Central",
+      "shortName": "GOC",
+      "city": "Goiânia",
+      "colours": { "primary": "#0f6b3a", "secondary": "#101010" },
+      "reputation": 55,
+      "budget": 56000000,
+      "stadiumCapacity": 27000
+    },
+    {
+      "id": "vitoria-serrana",
+      "name": "Vitória Serrana",
+      "shortName": "VSE",
+      "city": "Vitória",
+      "colours": { "primary": "#8b1a2b", "secondary": "#efefef" },
+      "reputation": 52,
+      "budget": 47000000,
+      "stadiumCapacity": 21000
+    },
+    {
+      "id": "amazonia-fc",
+      "name": "Amazônia FC",
+      "shortName": "AMZ",
+      "city": "Manaus",
+      "colours": { "primary": "#137a4c", "secondary": "#f4d35e" },
+      "reputation": 49,
+      "budget": 41000000,
+      "stadiumCapacity": 44000
+    },
+    {
+      "id": "uberlandia-triangular",
+      "name": "Uberlândia Triangular",
+      "shortName": "UTR",
+      "city": "Uberlândia",
+      "colours": { "primary": "#1a4a7a", "secondary": "#d92b2b" },
+      "reputation": 46,
+      "budget": 35000000,
+      "stadiumCapacity": 19000
+    },
+    {
+      "id": "natal-potiguar",
+      "name": "Natal Potiguar",
+      "shortName": "NPO",
+      "city": "Natal",
+      "colours": { "primary": "#c85a17", "secondary": "#153b64" },
+      "reputation": 43,
+      "budget": 30000000,
+      "stadiumCapacity": 22000
+    },
+    {
+      "id": "catarinense-unido",
+      "name": "Catarinense Unido",
+      "shortName": "CUN",
+      "city": "Joinville",
+      "colours": { "primary": "#2f2f8f", "secondary": "#ededed" },
+      "reputation": 40,
+      "budget": 26000000,
+      "stadiumCapacity": 17000
+    },
+    {
+      "id": "para-nortense",
+      "name": "Pará Nortense",
+      "shortName": "PNO",
+      "city": "Belém",
+      "colours": { "primary": "#0d7ba6", "secondary": "#f2f2f2" },
+      "reputation": 37,
+      "budget": 22000000,
+      "stadiumCapacity": 25000
+    },
+    {
+      "id": "norte-paranaense",
+      "name": "Norte Paranaense",
+      "shortName": "NPA",
+      "city": "Londrina",
+      "colours": { "primary": "#1f7a3f", "secondary": "#f7f7f7" },
+      "reputation": 34,
+      "budget": 18000000,
+      "stadiumCapacity": 15000
+    },
+    {
+      "id": "sao-luis-maranhense",
+      "name": "São Luís Maranhense",
+      "shortName": "SLM",
+      "city": "São Luís",
+      "colours": { "primary": "#a01b2e", "secondary": "#1b1b1b" },
+      "reputation": 31,
+      "budget": 14000000,
+      "stadiumCapacity": 16000
+    }
+  ]
+}

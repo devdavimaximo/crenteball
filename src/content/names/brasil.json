@@ -1,0 +1,23 @@
+{
+  "id": "brasil",
+  "given": [
+    "Adriano", "Alan", "Anderson", "André", "Bruno", "Caio", "Carlos", "Cauã",
+    "César", "Daniel", "Davi", "Diego", "Douglas", "Eduardo", "Emerson", "Enzo",
+    "Everton", "Fábio", "Felipe", "Fernando", "Gabriel", "Gustavo", "Heitor",
+    "Henrique", "Igor", "Ítalo", "João", "Joaquim", "Juliano", "Kauã", "Leandro",
+    "Leonardo", "Lucas", "Luiz", "Marcelo", "Marcos", "Mateus", "Miguel",
+    "Murilo", "Nicolas", "Otávio", "Pedro", "Rafael", "Renan", "Ricardo",
+    "Roberto", "Rodrigo", "Samuel", "Thiago", "Vinícius", "Wesley", "Yuri"
+  ],
+  "surnames": [
+    "Albuquerque", "Almeida", "Alves", "Andrade", "Araújo", "Barbosa", "Barros",
+    "Batista", "Bezerra", "Braga", "Cardoso", "Carvalho", "Castro", "Cavalcante",
+    "Correia", "Costa", "Cunha", "Dias", "Duarte", "Farias", "Fernandes",
+    "Ferreira", "Fonseca", "Freitas", "Gomes", "Gonçalves", "Lima", "Lopes",
+    "Macedo", "Machado", "Marques", "Martins", "Melo", "Mendes", "Moraes",
+    "Moreira", "Nascimento", "Neves", "Nogueira", "Nunes", "Oliveira", "Pacheco",
+    "Pereira", "Pinheiro", "Pinto", "Queiroz", "Ramos", "Rezende", "Ribeiro",
+    "Rocha", "Rodrigues", "Sales", "Santana", "Santos", "Silva", "Siqueira",
+    "Soares", "Souza", "Teixeira", "Vieira"
+  ]
+}
