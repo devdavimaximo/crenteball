@@ -3,6 +3,10 @@
   "name": "crenteball",
   "compatibility_date": "2026-07-21",
 
+  // Publishes on <name>.<account>.workers.dev. Declared here instead of being
+  // toggled in the dashboard so the public URL survives a project recreation.
+  "workers_dev": true,
+
   // Static assets only — there is no Worker script. The whole game runs in the
   // browser, so the edge does nothing but serve files (see README.md).
   "assets": {
