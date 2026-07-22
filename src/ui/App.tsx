@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { GAME_NAME, GAME_VERSION } from '@/engine/meta';
 import { ServiceWorkerPrompt } from '@/ui/components/ServiceWorkerPrompt';
 import { t } from '@/ui/i18n';
+import { MatchPrototype } from '@/ui/screens/MatchPrototype';
 import { ShotPlayground } from '@/ui/screens/ShotPlayground';
 
 /**
@@ -24,6 +25,14 @@ function useHash(): string {
 
 export function App() {
   const hash = useHash();
+
+  if (hash === '#partida' || hash === '#match') {
+    return (
+      <div className="h-full bg-noite-900">
+        <MatchPrototype />
+      </div>
+    );
+  }
 
   if (hash === '#shot' || hash === '#render') {
     return (

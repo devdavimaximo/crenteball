@@ -25,6 +25,7 @@ import {
 } from '@/engine/balance/match';
 import type { Rng, Seed } from '@/engine/rng';
 import { createRng, deriveSeed } from '@/engine/rng';
+import { poisson } from '@/engine/rng/distributions';
 
 import type { SquadPlayer } from './squad';
 import { squadStrength } from './squad';
@@ -70,28 +71,6 @@ export function expectedGoals(
 }
 
 /**
- * Knuth's Poisson sampler.
- *
- * Kept local rather than added to the Rng interface: this is the only caller,
- * and a distribution nobody else uses does not belong in the shared surface.
- * Promote it if a second system ever needs it.
- */
-function samplePoisson(rng: Rng, lambda: number): number {
-  const limit = Math.exp(-lambda);
-  let count = 0;
-  let product = rng.next();
-
-  while (product > limit) {
-    count += 1;
-    product *= rng.next();
-    // Guard against a pathological lambda producing an unbounded loop.
-    if (count > 20) break;
-  }
-
-  return count;
-}
-
-/**
  * Picks who scored.
  *
  * Weighted by position and finishing, so a striker with 80 finishing scores
@@ -121,11 +100,11 @@ export function simulateMatch(home: MatchTeam, away: MatchTeam, rng: Rng): Match
   const homeStrength = squadStrength(home.squad);
   const awayStrength = squadStrength(away.squad);
 
-  const homeGoals = samplePoisson(
+  const homeGoals = poisson(
     rng,
     expectedGoals(homeStrength, awayStrength, HOME_ATTACK_MULTIPLIER),
   );
-  const awayGoals = samplePoisson(
+  const awayGoals = poisson(
     rng,
     expectedGoals(awayStrength, homeStrength, AWAY_ATTACK_MULTIPLIER),
   );

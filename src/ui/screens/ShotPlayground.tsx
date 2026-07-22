@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 
 import { GOAL_HALF_WIDTH, GOAL_HEIGHT } from '@/engine/balance/shot';
 import { createRng, deriveSeed } from '@/engine/rng';
@@ -7,20 +7,20 @@ import type { ShotContext, ShotOutcome } from '@/engine/sim/shot';
 import { matchPerformance } from '@/engine/systems/rating';
 import type { RatedShot } from '@/engine/systems/rating';
 import { cameraFor, depthOf, unprojectAtDepth } from '@/render/projection';
-import { sampleShotAnimation } from '@/render/shotAnimation';
-import type { ShotAnimationSpec } from '@/render/shotAnimation';
-import { CanvasShotRenderer } from '@/render/shotSceneRenderer';
 import type { DefenderMarker, ShotScene } from '@/render/types';
 import { MatchHud } from '@/ui/match/MatchHud';
 import { defaultSwipeConfig, previewSwipe, readSwipe } from '@/ui/match/shotControl';
 import type { SwipeSample } from '@/ui/match/shotControl';
+import { useMatchScene } from '@/ui/match/useMatchScene';
 import { t } from '@/ui/i18n';
 
 /**
- * The first playable slice (M3.4): swipe through the ball to shoot, engine
- * resolves it, the mark shows where it went. Grows into the real match
- * prototype in M3.7; until then it exists so the *feel* of the control can be
- * judged on a phone, which no test can do.
+ * Practice range: the same shot, as many times as you like.
+ *
+ * The real match (`#partida`) is the milestone; this exists for tuning, where
+ * you want the identical 28-metre chance twenty times in a row to judge how
+ * the power curve feels. Shares the canvas hook with the match so the two can
+ * never drift apart.
  */
 
 const SEED = 20260721;
@@ -74,10 +74,7 @@ interface Result {
 }
 
 export function ShotPlayground() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const rendererRef = useRef<CanvasShotRenderer | null>(null);
   const samplesRef = useRef<SwipeSample[]>([]);
-  const animationRef = useRef<number | null>(null);
 
   const [presetIndex, setPresetIndex] = useState(0);
   const [attempt, setAttempt] = useState(0);
@@ -118,95 +115,9 @@ export function ShotPlayground() {
     [preset, aim, result],
   );
 
-  /**
-   * Plays the resolved shot, then reports the outcome to React.
-   *
-   * The loop calls the renderer directly — no setState per frame. React only
-   * hears about the animation twice: when it starts and when it ends. That is
-   * the 60fps rule (canvas outside the React render cycle) in practice.
-   */
-  const playShotAnimation = useCallback(
-    (animationSpec: ShotAnimationSpec, onDone: () => void) => {
-      const renderer = rendererRef.current;
-      if (!renderer) {
-        onDone();
-        return;
-      }
-
-      const baseScene: ShotScene = {
-        distance: animationSpec.distance,
-        angle: animationSpec.angle,
-        defenders: preset.defenders,
-        keeperX: animationSpec.keeperX,
-        aim: null,
-        ballMark: null,
-        ballFlight: null,
-        keeperPose: null,
-        kit: KIT,
-      };
-
-      const startedAt = performance.now();
-      const tick = (now: number) => {
-        const frame = sampleShotAnimation(animationSpec, now - startedAt);
-        renderer.render({
-          ...baseScene,
-          ballFlight: { ...frame.ball, alpha: frame.ballAlpha },
-          keeperPose: frame.keeper,
-        });
-
-        if (frame.done) {
-          animationRef.current = null;
-          onDone();
-          return;
-        }
-        animationRef.current = requestAnimationFrame(tick);
-      };
-
-      animationRef.current = requestAnimationFrame(tick);
-    },
-    [preset],
-  );
-
-  useEffect(
-    () => () => {
-      if (animationRef.current !== null) cancelAnimationFrame(animationRef.current);
-    },
-    [],
-  );
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const renderer = new CanvasShotRenderer();
-    renderer.mount(canvas);
-    rendererRef.current = renderer;
-
-    const observer = new ResizeObserver(() => {
-      const rect = canvas.getBoundingClientRect();
-      renderer.resize(rect.width, rect.height, window.devicePixelRatio || 1);
-      renderer.render(scene);
-    });
-    observer.observe(canvas);
-
-    return () => {
-      observer.disconnect();
-      renderer.destroy();
-      rendererRef.current = null;
-    };
-    // The scene render inside the observer callback uses the latest closure
-    // via the effect below; mounting is once per canvas.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    const renderer = rendererRef.current;
-    if (!canvas || !renderer) return;
-    const rect = canvas.getBoundingClientRect();
-    renderer.resize(rect.width, rect.height, window.devicePixelRatio || 1);
-    renderer.render(scene);
-  }, [scene]);
+  // Canvas, renderer and animation clock all live in the shared hook — the
+  // same one the real match uses, so the two screens cannot drift apart.
+  const { canvasRef, playShot, isAnimating } = useMatchScene(scene);
 
   /** Screen point → normalised aim on the goal plane. */
   const aimFromScreen = useCallback(
@@ -231,12 +142,12 @@ export function ShotPlayground() {
         y: Math.max(0, Math.min(1.5, world.y / GOAL_HEIGHT)),
       };
     },
-    [preset],
+    [canvasRef, preset],
   );
 
   const swipeConfig = defaultSwipeConfig(canvasRef.current?.clientHeight ?? 640);
 
-  const animating = () => animationRef.current !== null;
+  const animating = isAnimating;
 
   const onPointerDown = (event: React.PointerEvent<HTMLCanvasElement>) => {
     if (animating()) return; // the ball is in the air — let it land
@@ -291,7 +202,7 @@ export function ShotPlayground() {
       preset.distance * 0.5,
     );
 
-    playShotAnimation(
+    playShot(
       {
         distance: preset.distance,
         angle: preset.angle,
@@ -302,6 +213,7 @@ export function ShotPlayground() {
         keeperX: 0.4,
         blockDepth: nearestDefender,
       },
+      scene,
       () => {
         setHistory((shots) => [
           ...shots,
