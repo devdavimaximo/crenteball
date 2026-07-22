@@ -35,11 +35,16 @@ function recordingContext() {
     roundRect: record('roundRect', [0, 1, 2, 3]),
     fill: record('fill'),
     stroke: record('stroke'),
+    save: record('save'),
+    restore: record('restore'),
+    translate: record('translate', [0, 1]),
+    rotate: record('rotate', [0]),
     createLinearGradient: () => ({ addColorStop: () => undefined }),
     set fillStyle(_: unknown) {},
     set strokeStyle(_: unknown) {},
     set lineWidth(_: unknown) {},
     set lineCap(_: unknown) {},
+    set globalAlpha(_: unknown) {},
   };
 
   return { ctx, coordinates, calls };
@@ -58,6 +63,8 @@ const SCENES: ShotScene[] = [
     keeperX: 0,
     aim: null,
     ballMark: null,
+    ballFlight: null,
+    keeperPose: null,
     kit: { primary: '#c8102e', secondary: '#101010' },
   },
   {
@@ -67,6 +74,9 @@ const SCENES: ShotScene[] = [
     keeperX: 0.5,
     aim: { x: 0.7, y: 0.2, spreadM: 0.6 },
     ballMark: null,
+    // Mid-dive frame: ball inside the net, keeper fully stretched.
+    ballFlight: { x: 2.1, y: 0.9, metresFromGoal: -0.4, alpha: 1 },
+    keeperPose: { dive: 0.8, stretch: 1 },
     kit: { primary: '#c8102e', secondary: '#101010' },
   },
   {
@@ -81,6 +91,8 @@ const SCENES: ShotScene[] = [
     aim: { x: -0.9, y: 0.9, spreadM: 2.4 },
     // A wild miss: the mark must render even well outside the frame.
     ballMark: { x: -6.2, y: 3.1 },
+    ballFlight: { x: -7, y: 3.4, metresFromGoal: -2.5, alpha: 0.4 },
+    keeperPose: { dive: -0.2, stretch: 0.3 },
     kit: { primary: '#0b3d91', secondary: '#f2f2f2' },
   },
 ];

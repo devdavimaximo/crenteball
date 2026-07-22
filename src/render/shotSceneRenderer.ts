@@ -58,13 +58,19 @@ export class CanvasShotRenderer implements MatchRenderer {
     const view = this.viewport;
     const camera = cameraFor(scene.distance, scene.angle, view);
 
+    const flight = scene.ballFlight;
+    const ballInNet = flight !== null && flight.metresFromGoal < 0;
+
     this.drawBackdrop(ctx, camera, view);
     this.drawPitch(ctx, scene, camera, view);
+    // A ball inside the goal is drawn before the net so the mesh overlays it.
+    if (flight && ballInNet) this.drawBallAt(ctx, flight, scene, camera, view);
     this.drawGoal(ctx, scene, camera, view);
     this.drawKeeper(ctx, scene, camera, view);
     this.drawDefenders(ctx, scene, camera, view);
     this.drawShooter(ctx, scene, camera, view);
-    this.drawBall(ctx, scene, camera, view);
+    if (flight && !ballInNet) this.drawBallAt(ctx, flight, scene, camera, view);
+    if (!flight) this.drawBall(ctx, scene, camera, view);
     if (scene.aim) this.drawReticle(ctx, scene, camera, view);
     if (scene.ballMark) this.drawBallMark(ctx, scene, camera, view);
   }
@@ -233,9 +239,49 @@ export class CanvasShotRenderer implements MatchRenderer {
     camera: Camera,
     view: Viewport,
   ): void {
+    const pose = scene.keeperPose;
+    const reachM = 2.6;
+
+    // The dive shifts the keeper along the goal line and tips the body over.
+    const offsetX = pose ? pose.dive * reachM : 0;
     const depth = depthOf(0.8, scene.distance, camera);
-    const p = project(scene.keeperX, 0, depth, camera, view);
+    const p = project(scene.keeperX + offsetX, 0, depth, camera, view);
+
+    if (pose && Math.abs(pose.dive) > 0.01) {
+      ctx.save();
+      ctx.translate(p.sx, p.sy);
+      ctx.rotate(pose.dive * pose.stretch * 1.1);
+      this.drawBody(ctx, 0, 0, p.scale, COLOURS.keeper, 1.9);
+      ctx.restore();
+      return;
+    }
+
     this.drawBody(ctx, p.sx, p.sy, p.scale, COLOURS.keeper, 1.9);
+  }
+
+  /** The ball at an arbitrary world position — flight frames. */
+  private drawBallAt(
+    ctx: CanvasRenderingContext2D,
+    flight: NonNullable<ShotScene['ballFlight']>,
+    scene: ShotScene,
+    camera: Camera,
+    view: Viewport,
+  ): void {
+    const depth = depthOf(flight.metresFromGoal, scene.distance, camera);
+    const p = project(flight.x, flight.y, depth, camera, view);
+    const r = Math.max(3, p.scale * 0.11);
+
+    ctx.save();
+    ctx.globalAlpha = flight.alpha;
+    ctx.fillStyle = COLOURS.ball;
+    ctx.beginPath();
+    ctx.arc(p.sx, p.sy, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = COLOURS.skyBottom;
+    ctx.beginPath();
+    ctx.arc(p.sx, p.sy, r * 0.38, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
   }
 
   private drawDefenders(

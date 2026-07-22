@@ -41,10 +41,22 @@ export interface ShotScene {
   readonly aim: AimState | null;
   /**
    * Where the ball crossed the goal plane after a resolved shot, in metres
-   * (world x, height y). Null before the shot. Flight animation is M3.5 —
-   * until then this mark is the outcome's visual anchor.
+   * (world x, height y). Null before the shot.
    */
   readonly ballMark: { readonly x: number; readonly y: number } | null;
+  /**
+   * Ball in flight, world space. When set it replaces the ball at the
+   * shooter's feet; `metresFromGoal` may go negative (inside the net), which
+   * changes draw order so the net overlays the ball.
+   */
+  readonly ballFlight: {
+    readonly x: number;
+    readonly y: number;
+    readonly metresFromGoal: number;
+    readonly alpha: number;
+  } | null;
+  /** Keeper mid-dive: signed direction times progress, and arm extension. */
+  readonly keeperPose: { readonly dive: number; readonly stretch: number } | null;
   /** Shirt colours, so the scene reads as "my club" at a glance. */
   readonly kit: { readonly primary: string; readonly secondary: string };
 }

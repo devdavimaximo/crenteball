@@ -5,6 +5,8 @@ import { createRng, deriveSeed } from '@/engine/rng';
 import { aimingError, resolveShot } from '@/engine/sim/shot';
 import type { ShotContext, ShotOutcome } from '@/engine/sim/shot';
 import { cameraFor, depthOf, unprojectAtDepth } from '@/render/projection';
+import { sampleShotAnimation } from '@/render/shotAnimation';
+import type { ShotAnimationSpec } from '@/render/shotAnimation';
 import { CanvasShotRenderer } from '@/render/shotSceneRenderer';
 import type { DefenderMarker, ShotScene } from '@/render/types';
 import { defaultSwipeConfig, previewSwipe, readSwipe } from '@/ui/match/shotControl';
@@ -72,6 +74,7 @@ export function ShotPlayground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<CanvasShotRenderer | null>(null);
   const samplesRef = useRef<SwipeSample[]>([]);
+  const animationRef = useRef<number | null>(null);
 
   const [presetIndex, setPresetIndex] = useState(0);
   const [attempt, setAttempt] = useState(0);
@@ -104,9 +107,67 @@ export function ShotPlayground() {
       keeperX: 0.4,
       aim,
       ballMark: result ? { x: result.markX, y: result.markY } : null,
+      ballFlight: null,
+      keeperPose: null,
       kit: KIT,
     }),
     [preset, aim, result],
+  );
+
+  /**
+   * Plays the resolved shot, then reports the outcome to React.
+   *
+   * The loop calls the renderer directly — no setState per frame. React only
+   * hears about the animation twice: when it starts and when it ends. That is
+   * the 60fps rule (canvas outside the React render cycle) in practice.
+   */
+  const playShotAnimation = useCallback(
+    (animationSpec: ShotAnimationSpec, onDone: () => void) => {
+      const renderer = rendererRef.current;
+      if (!renderer) {
+        onDone();
+        return;
+      }
+
+      const baseScene: ShotScene = {
+        distance: animationSpec.distance,
+        angle: animationSpec.angle,
+        defenders: preset.defenders,
+        keeperX: animationSpec.keeperX,
+        aim: null,
+        ballMark: null,
+        ballFlight: null,
+        keeperPose: null,
+        kit: KIT,
+      };
+
+      const startedAt = performance.now();
+      const tick = (now: number) => {
+        const frame = sampleShotAnimation(animationSpec, now - startedAt);
+        renderer.render({
+          ...baseScene,
+          ballFlight: { ...frame.ball, alpha: frame.ballAlpha },
+          keeperPose: frame.keeper,
+        });
+
+        if (frame.done) {
+          animationRef.current = null;
+          onDone();
+          return;
+        }
+        animationRef.current = requestAnimationFrame(tick);
+      };
+
+      animationRef.current = requestAnimationFrame(tick);
+    },
+    [preset],
+  );
+
+  useEffect(
+    () => () => {
+      if (animationRef.current !== null) cancelAnimationFrame(animationRef.current);
+    },
+    [],
   );
 
   useEffect(() => {
@@ -171,7 +232,10 @@ export function ShotPlayground() {
 
   const swipeConfig = defaultSwipeConfig(canvasRef.current?.clientHeight ?? 640);
 
+  const animating = () => animationRef.current !== null;
+
   const onPointerDown = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    if (animating()) return; // the ball is in the air — let it land
     if (result) {
       // Tap after a resolved shot: rearm the same situation.
       setResult(null);
@@ -183,7 +247,7 @@ export function ShotPlayground() {
   };
 
   const onPointerMove = (event: React.PointerEvent<HTMLCanvasElement>) => {
-    if (samplesRef.current.length === 0 || result) return;
+    if (samplesRef.current.length === 0 || result || animating()) return;
     samplesRef.current.push({ x: event.clientX, y: event.clientY, t: performance.now() });
 
     const preview = previewSwipe(samplesRef.current, swipeConfig);
@@ -202,7 +266,7 @@ export function ShotPlayground() {
   const onPointerUp = () => {
     const samples = samplesRef.current;
     samplesRef.current = [];
-    if (result || samples.length === 0) return;
+    if (result || animating() || samples.length === 0) return;
 
     const reading = readSwipe(samples, swipeConfig);
     setAim(null);
@@ -216,10 +280,32 @@ export function ShotPlayground() {
       shotContext,
       rng,
     );
-
     setAttempt((n) => n + 1);
-    setTally((c) => ({ shots: c.shots + 1, goals: c.goals + (shot.outcome === 'goal' ? 1 : 0) }));
-    setResult({ outcome: shot.outcome, markX: shot.targetX, markY: shot.targetY });
+
+    const nearestDefender = preset.defenders.reduce(
+      (nearest, defender) => Math.min(nearest, defender.depth),
+      preset.distance * 0.5,
+    );
+
+    playShotAnimation(
+      {
+        distance: preset.distance,
+        angle: preset.angle,
+        targetX: shot.targetX,
+        targetY: shot.targetY,
+        outcome: shot.outcome,
+        power: reading.power,
+        keeperX: 0.4,
+        blockDepth: nearestDefender,
+      },
+      () => {
+        setTally((c) => ({
+          shots: c.shots + 1,
+          goals: c.goals + (shot.outcome === 'goal' ? 1 : 0),
+        }));
+        setResult({ outcome: shot.outcome, markX: shot.targetX, markY: shot.targetY });
+      },
+    );
   };
 
   return (
