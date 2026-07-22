@@ -6,11 +6,14 @@
  * file stays navigable as the game grows.
  */
 export const ptBR = {
-  'boot.milestone': 'M0',
-  'boot.tagline': 'Fundação técnica no lugar. O núcleo do jogo começa no M1.',
+  'boot.milestone': 'M3 · protótipo',
+  'boot.tagline': 'A partida já é jogável. Carreira e progressão vêm no M4.',
+  'boot.playMatch': 'Jogar uma partida',
+  'boot.practice': 'Estande de treino',
 
   'hud.energy': 'Energia',
   'hud.rating': 'Nota da partida',
+  'hud.exit': 'Sair da partida',
 
   'match.kickoff': 'Começa o jogo',
   'match.momentOf': 'Lance {n} de {total}',

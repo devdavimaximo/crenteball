@@ -7,9 +7,11 @@ import { MatchPrototype } from '@/ui/screens/MatchPrototype';
 import { ShotPlayground } from '@/ui/screens/ShotPlayground';
 
 /**
- * Hash-based switching, deliberately primitive: `#shot` (or the older
- * `#render`) opens the playable shot harness, anything else the splash. A
- * router earns its place when the game has real screens (M3.7) — not before.
+ * Hash-based switching, deliberately primitive. A router earns its place when
+ * the game has a career to navigate (M4 onwards) — not before.
+ *
+ * The installed app launches at `/`, so this splash is the only way in: every
+ * playable screen needs a button here or it may as well not exist.
  */
 function useHash(): string {
   const [hash, setHash] = useState(window.location.hash);
@@ -23,37 +25,49 @@ function useHash(): string {
   return hash;
 }
 
-export function App() {
-  const hash = useHash();
-
-  if (hash === '#partida' || hash === '#match') {
-    return (
-      <div className="h-full bg-noite-900">
-        <MatchPrototype />
-      </div>
-    );
-  }
-
-  if (hash === '#shot' || hash === '#render') {
-    return (
-      <div className="h-full bg-noite-900">
-        <ShotPlayground />
-      </div>
-    );
-  }
+function Screen({ hash }: { hash: string }) {
+  if (hash === '#partida' || hash === '#match') return <MatchPrototype />;
+  if (hash === '#treino' || hash === '#shot' || hash === '#render') return <ShotPlayground />;
 
   return (
-    <main className="flex min-h-full flex-col items-center justify-center gap-3 bg-noite-900 px-6 text-center text-white">
+    <main className="flex min-h-full flex-col items-center justify-center gap-3 px-6 text-center text-white">
       <p className="text-xs font-medium uppercase tracking-[0.3em] text-relva-300">
         {t('boot.milestone')}
       </p>
       <h1 className="text-5xl font-black tracking-tight">{GAME_NAME}</h1>
       <p className="max-w-xs text-balance text-sm text-white/60">{t('boot.tagline')}</p>
-      <code className="mt-4 rounded-full bg-white/5 px-3 py-1 text-xs text-white/40">
+
+      <div className="mt-6 flex w-full max-w-xs flex-col gap-3">
+        <a
+          href="#partida"
+          className="flex min-h-12 items-center justify-center rounded-full bg-relva-500 px-8 text-sm font-bold text-white"
+        >
+          {t('boot.playMatch')}
+        </a>
+        <a
+          href="#treino"
+          className="flex min-h-12 items-center justify-center rounded-full bg-white/10 px-8 text-sm font-semibold text-white"
+        >
+          {t('boot.practice')}
+        </a>
+      </div>
+
+      <code className="mt-6 rounded-full bg-white/5 px-3 py-1 text-xs text-white/40">
         v{GAME_VERSION}
       </code>
-
-      <ServiceWorkerPrompt />
     </main>
+  );
+}
+
+export function App() {
+  const hash = useHash();
+
+  return (
+    <div className="h-full bg-noite-900">
+      <Screen hash={hash} />
+      {/* Always mounted: an update prompt that only appears on the splash
+          would never be seen by someone who opens straight into a match. */}
+      <ServiceWorkerPrompt />
+    </div>
   );
 }

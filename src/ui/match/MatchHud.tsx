@@ -24,6 +24,24 @@ export interface MatchHudProps {
   readonly rating: number;
 }
 
+/**
+ * Way out of the match.
+ *
+ * In a browser tab the back button covers this; in the installed app there is
+ * no browser chrome at all, and without it the player is stuck on the pitch.
+ */
+function ExitButton() {
+  return (
+    <a
+      href="#"
+      aria-label={t('hud.exit')}
+      className="pointer-events-auto flex size-9 items-center justify-center rounded-xl bg-noite-900/75 text-white/70 backdrop-blur-sm"
+    >
+      ←
+    </a>
+  );
+}
+
 const BAND_CLASS = {
   standout: 'bg-relva-500 text-white',
   solid: 'bg-white/15 text-white',
@@ -51,6 +69,8 @@ export function MatchHud({
       style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}
     >
       <div className="flex items-center gap-2">
+        <ExitButton />
+
         {/* Scoreline */}
         <div className="flex items-center gap-2 rounded-xl bg-noite-900/75 px-3 py-1.5 backdrop-blur-sm">
           <span className="text-sm font-semibold tracking-wide">{homeShort}</span>

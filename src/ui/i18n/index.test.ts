@@ -5,7 +5,10 @@ import { ptBR } from './pt-BR';
 
 describe('t', () => {
   it('resolves a known key', () => {
-    expect(t('boot.milestone')).toBe('M0');
+    // Checked against the dictionary, not a hardcoded string: this test is
+    // about lookup working, and copy changes should never break it.
+    expect(t('boot.milestone')).toBe(ptBR['boot.milestone']);
+    expect(t('boot.milestone')).not.toBe('');
   });
 });
 
