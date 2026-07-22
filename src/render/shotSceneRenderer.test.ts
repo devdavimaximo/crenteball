@@ -32,7 +32,11 @@ function recordingContext() {
     moveTo: record('moveTo', [0, 1]),
     lineTo: record('lineTo', [0, 1]),
     arc: record('arc', [0, 1, 2]),
+    ellipse: record('ellipse', [0, 1, 2, 3]),
     roundRect: record('roundRect', [0, 1, 2, 3]),
+    closePath: record('closePath'),
+    clip: record('clip'),
+    fillText: record('fillText', [1, 2]),
     fill: record('fill'),
     stroke: record('stroke'),
     save: record('save'),
@@ -40,11 +44,16 @@ function recordingContext() {
     translate: record('translate', [0, 1]),
     rotate: record('rotate', [0]),
     createLinearGradient: () => ({ addColorStop: () => undefined }),
+    createRadialGradient: () => ({ addColorStop: () => undefined }),
     set fillStyle(_: unknown) {},
     set strokeStyle(_: unknown) {},
     set lineWidth(_: unknown) {},
     set lineCap(_: unknown) {},
+    set lineJoin(_: unknown) {},
     set globalAlpha(_: unknown) {},
+    set font(_: unknown) {},
+    set textAlign(_: unknown) {},
+    set textBaseline(_: unknown) {},
   };
 
   return { ctx, coordinates, calls };
@@ -115,20 +124,22 @@ describe('CanvasShotRenderer', () => {
   });
 
   it('draws the reticle only while aiming', () => {
-    const withAim = recordingContext();
-    const withoutAim = recordingContext();
+    // Two scenes identical but for the aim, so the difference in draw calls
+    // can only be the reticle.
+    const base = SCENES[0] as ShotScene;
+    const draw = (scene: ShotScene) => {
+      const recorder = recordingContext();
+      const renderer = new CanvasShotRenderer();
+      renderer.mount(fakeCanvas(recorder.ctx));
+      renderer.resize(360, 640, 1);
+      renderer.render(scene);
+      return recorder.calls.length;
+    };
 
-    const renderer = new CanvasShotRenderer();
-    renderer.mount(fakeCanvas(withAim.ctx));
-    renderer.resize(360, 640, 1);
-    renderer.render(SCENES[1] as ShotScene);
+    const without = draw({ ...base, aim: null });
+    const with_ = draw({ ...base, aim: { x: 0.5, y: 0.4, spreadM: 0.8 } });
 
-    renderer.mount(fakeCanvas(withoutAim.ctx));
-    renderer.render(SCENES[0] as ShotScene);
-
-    expect(withAim.calls.filter((c) => c === 'arc').length).toBeGreaterThan(
-      withoutAim.calls.filter((c) => c === 'arc').length,
-    );
+    expect(with_).toBeGreaterThan(without);
   });
 
   it('survives render before mount and after destroy', () => {

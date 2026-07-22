@@ -51,17 +51,24 @@ describe('the goal on screen', () => {
     expect(goalWidthPx(8, PHONE)).toBeGreaterThan(goalWidthPx(30, PHONE));
   });
 
-  it('stays inside the frame across the whole distance range', () => {
-    for (const viewport of [PHONE, DESKTOP]) {
-      for (const distance of [3, 8, 16, 30, 45]) {
-        const width = goalWidthPx(distance, viewport);
-        expect(width, `${String(distance)}m @${String(viewport.width)}px`).toBeGreaterThan(
-          viewport.width * 0.2,
-        );
-        expect(width, `${String(distance)}m @${String(viewport.width)}px`).toBeLessThan(
-          viewport.width * 0.98,
-        );
-      }
+  it('fills a generous share of a phone screen at every range', () => {
+    // The phone is the primary target, so this is where the goal has to be
+    // commanding.
+    for (const distance of [3, 8, 16, 30, 45]) {
+      const width = goalWidthPx(distance, PHONE);
+      expect(width, `${String(distance)}m`).toBeGreaterThan(PHONE.width * 0.28);
+      expect(width, `${String(distance)}m`).toBeLessThan(PHONE.width * 0.98);
+    }
+  });
+
+  it('stays readable on a wide screen, where the vertical budget rules', () => {
+    // On a landscape viewport the lens is capped by the frame's height, so
+    // the goal is deliberately smaller than on a phone — desktop is the
+    // adaptation, not the target.
+    for (const distance of [3, 8, 16, 30, 45]) {
+      const width = goalWidthPx(distance, DESKTOP);
+      expect(width, `${String(distance)}m`).toBeGreaterThan(DESKTOP.width * 0.12);
+      expect(width, `${String(distance)}m`).toBeLessThan(DESKTOP.width * 0.98);
     }
   });
 
@@ -102,9 +109,49 @@ describe('world helpers', () => {
   });
 
   it('measures depth from the camera, not the ball', () => {
+    // backOff is solved from the composition, not fixed, so the assertions
+    // are about the relationship rather than a magic number.
     const camera = cameraFor(20, 0, PHONE);
-    expect(depthOf(0, 20, camera)).toBe(25); // goal: distance + backoff
-    expect(depthOf(20, 20, camera)).toBe(5); // ball: just the backoff
+    expect(depthOf(0, 20, camera)).toBeCloseTo(20 + camera.backOff, 6);
+    expect(depthOf(20, 20, camera)).toBeCloseTo(camera.backOff, 6);
     expect(depthOf(8, 20, camera)).toBeGreaterThan(depthOf(20, 20, camera));
+  });
+
+  it('keeps the camera a plausible distance behind the ball at any range', () => {
+    for (const distance of [3, 8, 16, 30, 45]) {
+      const camera = cameraFor(distance, 0, PHONE);
+      expect(camera.backOff, `${String(distance)}m`).toBeGreaterThanOrEqual(1.2);
+      expect(camera.backOff, `${String(distance)}m`).toBeLessThanOrEqual(9);
+    }
+  });
+
+  it('lands the ball near the bottom of the frame at every range', () => {
+    // The composition rule that stopped half the screen being empty grass.
+    for (const viewport of [PHONE, DESKTOP]) {
+      for (const distance of [3, 8, 16, 30, 45]) {
+        const camera = cameraFor(distance, 0, viewport);
+        const ball = project(0, 0, depthOf(distance, distance, camera), camera, viewport);
+        expect(ball.sy / viewport.height, `${String(distance)}m`).toBeGreaterThan(0.55);
+        expect(ball.sy / viewport.height, `${String(distance)}m`).toBeLessThan(1);
+      }
+    }
+  });
+
+  it('keeps the whole goal in frame even at the widest angle', () => {
+    // Angled shots used to push the far post clean off the left edge.
+    for (const viewport of [PHONE, DESKTOP]) {
+      for (const angle of [-45, -30, -15, 0, 15, 30, 45]) {
+        for (const distance of [8, 20, 40]) {
+          const camera = cameraFor(distance, angle, viewport);
+          const depth = depthOf(0, distance, camera);
+          const left = project(-GOAL_HALF_WIDTH, 0, depth, camera, viewport);
+          const right = project(GOAL_HALF_WIDTH, 0, depth, camera, viewport);
+
+          const label = `${String(distance)}m @${String(angle)}deg`;
+          expect(left.sx, label).toBeGreaterThanOrEqual(0);
+          expect(right.sx, label).toBeLessThanOrEqual(viewport.width);
+        }
+      }
+    }
   });
 });
