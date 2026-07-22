@@ -19,6 +19,7 @@ import { HAIR_STYLES, randomAppearance } from '@/engine/domain/appearance';
 import { createRng } from '@/engine/rng';
 import { drawAthlete } from '@/render/athlete';
 import { GRASS, SKY } from '@/render/palette';
+import { sampleShotAnimation, shotFlightMs } from '@/render/shotAnimation';
 import { CanvasShotRenderer } from '@/render/shotSceneRenderer';
 import type { ShotScene } from '@/render/types';
 
@@ -39,6 +40,7 @@ const base = {
   ballMark: null,
   ballFlight: null,
   keeperPose: null,
+  effects: null,
   kit: KIT,
 } as const;
 
@@ -115,9 +117,58 @@ const PREVIEWS: readonly Preview[] = [
   },
 ];
 
+/**
+ * Frames sampled from a real goal animation, so the juice is judged from
+ * what actually plays rather than from hand-written effect values.
+ */
+function goalFrames(): Preview[] {
+  const spec = {
+    distance: 15,
+    angle: 6,
+    targetX: 2.5,
+    targetY: 1.15,
+    outcome: 'goal',
+    power: 0.7,
+    keeperX: 0.3,
+    blockDepth: 5,
+  } as const;
+
+  const flight = shotFlightMs(spec.distance, spec.power);
+
+  return [
+    ['08-flight', flight * 0.62],
+    ['09-impact', flight + 25],
+    ['10-aftermath', flight + 260],
+  ].map(([name, at]) => {
+    const frame = sampleShotAnimation(spec, at as number);
+
+    return {
+      name: name as string,
+      width: 390,
+      height: 780,
+      scene: {
+        ...base,
+        distance: spec.distance,
+        angle: spec.angle,
+        defenders: [{ x: -1.4, depth: 5 }],
+        ballFlight: { ...frame.ball, alpha: frame.ballAlpha },
+        keeperPose: frame.keeper,
+        effects: {
+          trail: frame.trail,
+          netImpact: frame.netImpact,
+          turf: frame.turf,
+          shakeX: frame.shakeX,
+          shakeY: frame.shakeY,
+          flash: frame.flash,
+        },
+      },
+    } satisfies Preview;
+  });
+}
+
 mkdirSync(OUT_DIR, { recursive: true });
 
-for (const preview of PREVIEWS) {
+for (const preview of [...PREVIEWS, ...goalFrames()]) {
   const canvas = createCanvas(preview.width, preview.height);
   const renderer = new CanvasShotRenderer();
 

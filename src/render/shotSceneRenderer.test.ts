@@ -74,6 +74,7 @@ const SCENES: ShotScene[] = [
     ballMark: null,
     ballFlight: null,
     keeperPose: null,
+    effects: null,
     kit: { primary: '#c8102e', secondary: '#101010' },
   },
   {
@@ -86,6 +87,18 @@ const SCENES: ShotScene[] = [
     // Mid-dive frame: ball inside the net, keeper fully stretched.
     ballFlight: { x: 2.1, y: 0.9, metresFromGoal: -0.4, alpha: 1 },
     keeperPose: { dive: 0.8, stretch: 1 },
+    // Mid-celebration: net bulging, frame shaking, turf still in the air.
+    effects: {
+      trail: [
+        { x: 1.8, y: 1, metresFromGoal: 0.6 },
+        { x: 1.4, y: 1.1, metresFromGoal: 1.6 },
+      ],
+      netImpact: { x: 2.1, y: 0.9, strength: 0.9 },
+      turf: [{ x: 0.2, y: 0.3, metresFromGoal: 10, alpha: 0.6 }],
+      shakeX: 0.012,
+      shakeY: -0.007,
+      flash: 0.5,
+    },
     kit: { primary: '#c8102e', secondary: '#101010' },
   },
   {
@@ -102,6 +115,7 @@ const SCENES: ShotScene[] = [
     ballMark: { x: -6.2, y: 3.1 },
     ballFlight: { x: -7, y: 3.4, metresFromGoal: -2.5, alpha: 0.4 },
     keeperPose: { dive: -0.2, stretch: 0.3 },
+    effects: null,
     kit: { primary: '#0b3d91', secondary: '#f2f2f2' },
   },
 ];

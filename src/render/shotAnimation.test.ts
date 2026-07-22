@@ -134,6 +134,109 @@ describe('each outcome reads differently', () => {
   });
 });
 
+describe('impact feedback', () => {
+  it('trails the ball only while it is travelling', () => {
+    const s = spec();
+    const flight = shotFlightMs(s.distance, s.power);
+
+    expect(sampleShotAnimation(s, flight * 0.6).trail.length).toBeGreaterThan(0);
+    // Once it is in the net it settles; a resting ball must not smear.
+    expect(sampleShotAnimation(s, flight + 300).trail).toHaveLength(0);
+  });
+
+  it('draws no trail before the ball has moved', () => {
+    expect(sampleShotAnimation(spec(), 0).trail).toHaveLength(0);
+  });
+
+  it('puts the trail behind the ball, never ahead of it', () => {
+    const s = spec();
+    const frame = sampleShotAnimation(s, shotFlightMs(s.distance, s.power) * 0.7);
+    for (const ghost of frame.trail) {
+      expect(ghost.metresFromGoal).toBeGreaterThanOrEqual(frame.ball.metresFromGoal);
+    }
+  });
+
+  it('dents the net only for a goal, and only after it goes in', () => {
+    const s = spec({ outcome: 'goal' });
+    const flight = shotFlightMs(s.distance, s.power);
+
+    expect(sampleShotAnimation(s, flight * 0.5).netImpact).toBeNull();
+    expect(sampleShotAnimation(s, flight + 20).netImpact).not.toBeNull();
+    expect(sampleShotAnimation(spec({ outcome: 'saved' }), flight + 20).netImpact).toBeNull();
+  });
+
+  it('lets the net recover', () => {
+    const s = spec({ outcome: 'goal' });
+    const flight = shotFlightMs(s.distance, s.power);
+    const early = sampleShotAnimation(s, flight + 20).netImpact?.strength ?? 0;
+    const late = sampleShotAnimation(s, flight + 400).netImpact?.strength ?? 0;
+    expect(late).toBeLessThan(early);
+    expect(late).toBeGreaterThanOrEqual(0);
+  });
+
+  it('shakes the frame on a goal and not on a shot into the stands', () => {
+    const flight = shotFlightMs(16, 0.6);
+    const goal = sampleShotAnimation(spec({ outcome: 'goal' }), flight + 30);
+    const wide = sampleShotAnimation(spec({ outcome: 'off-target' }), flight + 30);
+
+    expect(Math.abs(goal.shakeX) + Math.abs(goal.shakeY)).toBeGreaterThan(0);
+    expect(Math.abs(wide.shakeX) + Math.abs(wide.shakeY)).toBe(0);
+  });
+
+  it('settles the shake, never leaving the frame off-centre', () => {
+    const s = spec({ outcome: 'goal' });
+    const all = frames(s);
+    const last = all[all.length - 1]?.frame;
+    expect(Math.abs(last?.shakeX ?? 1)).toBeLessThan(0.001);
+    expect(Math.abs(last?.shakeY ?? 1)).toBeLessThan(0.001);
+  });
+
+  it('keeps the shake small enough to read as impact, not damage', () => {
+    for (const outcome of OUTCOMES) {
+      for (const { frame } of frames(spec({ outcome }))) {
+        expect(Math.abs(frame.shakeX), outcome).toBeLessThan(0.03);
+        expect(Math.abs(frame.shakeY), outcome).toBeLessThan(0.03);
+      }
+    }
+  });
+
+  it('flashes on a goal and fades out', () => {
+    const s = spec({ outcome: 'goal' });
+    const flight = shotFlightMs(s.distance, s.power);
+    expect(sampleShotAnimation(s, flight * 0.5).flash).toBe(0);
+    expect(sampleShotAnimation(s, flight + 10).flash).toBeGreaterThan(0.5);
+    expect(sampleShotAnimation(s, flight + 400).flash).toBe(0);
+  });
+
+  it('kicks turf up at the strike and lets it fall', () => {
+    const early = sampleShotAnimation(spec(), 40);
+    expect(early.turf.length).toBeGreaterThan(0);
+    for (const speck of early.turf) {
+      expect(speck.y).toBeGreaterThanOrEqual(0);
+      expect(Number.isFinite(speck.x)).toBe(true);
+    }
+    expect(sampleShotAnimation(spec(), 900).turf).toHaveLength(0);
+  });
+
+  it('holds the world still for a moment on impact', () => {
+    // Hitstop: two frames either side of the freeze show the ball in the
+    // same place, which is what makes contact feel like contact.
+    const s = spec({ outcome: 'goal' });
+    const flight = shotFlightMs(s.distance, s.power);
+
+    const atImpact = sampleShotAnimation(s, flight + 5).ball;
+    const duringFreeze = sampleShotAnimation(s, flight + 80).ball;
+    expect(duringFreeze.metresFromGoal).toBeCloseTo(atImpact.metresFromGoal, 2);
+  });
+
+  it('does not lose time to the freeze — the animation still ends', () => {
+    for (const outcome of OUTCOMES) {
+      const all = frames(spec({ outcome }));
+      expect(all[all.length - 1]?.frame.done, outcome).toBe(true);
+    }
+  });
+});
+
 describe('the keeper', () => {
   it('waits before reacting', () => {
     const early = sampleShotAnimation(spec({ outcome: 'saved' }), 10);

@@ -109,6 +109,7 @@ export function MatchPrototype() {
       ballMark: shot ? { x: shot.markX, y: shot.markY } : null,
       ballFlight: null,
       keeperPose: null,
+      effects: null,
       kit: { primary: CLUB.primary, secondary: '#101010' },
     }),
     [moment, aim, shot, phase],

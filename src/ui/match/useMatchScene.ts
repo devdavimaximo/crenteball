@@ -72,6 +72,14 @@ export function useMatchScene(scene: ShotScene) {
         ballMark: null,
         ballFlight: { ...frame.ball, alpha: frame.ballAlpha },
         keeperPose: frame.keeper,
+        effects: {
+          trail: frame.trail,
+          netImpact: frame.netImpact,
+          turf: frame.turf,
+          shakeX: frame.shakeX,
+          shakeY: frame.shakeY,
+          flash: frame.flash,
+        },
       });
 
       if (frame.done) {

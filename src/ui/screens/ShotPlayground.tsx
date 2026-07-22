@@ -110,6 +110,7 @@ export function ShotPlayground() {
       ballMark: result ? { x: result.markX, y: result.markY } : null,
       ballFlight: null,
       keeperPose: null,
+      effects: null,
       kit: KIT,
     }),
     [preset, aim, result],

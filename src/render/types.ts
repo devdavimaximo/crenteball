@@ -29,6 +29,17 @@ export interface AimState {
   readonly spreadM: number;
 }
 
+/** Per-frame impact feedback, produced by `sampleShotAnimation`. */
+export interface SceneEffects {
+  readonly trail: readonly { x: number; y: number; metresFromGoal: number }[];
+  readonly netImpact: { x: number; y: number; strength: number } | null;
+  readonly turf: readonly { x: number; y: number; metresFromGoal: number; alpha: number }[];
+  /** Fractions of the viewport's smaller side. */
+  readonly shakeX: number;
+  readonly shakeY: number;
+  readonly flash: number;
+}
+
 export interface ShotScene {
   /** Metres from ball to goal line. */
   readonly distance: number;
@@ -57,6 +68,11 @@ export interface ShotScene {
   } | null;
   /** Keeper mid-dive: signed direction times progress, and arm extension. */
   readonly keeperPose: { readonly dive: number; readonly stretch: number } | null;
+  /**
+   * Impact feedback for the current frame. Null for a still scene — all of it
+   * comes from the animation sampler, never from the renderer's own clock.
+   */
+  readonly effects: SceneEffects | null;
   /** Shirt colours, so the scene reads as "my club" at a glance. */
   readonly kit: { readonly primary: string; readonly secondary: string };
 }

@@ -8,7 +8,7 @@
  * exactly the scene it is handed, once per `render` call.
  */
 import { HAIR_STYLES, type Appearance } from '@/engine/domain/appearance';
-import { GOAL_HALF_WIDTH, GOAL_HEIGHT } from '@/engine/balance/shot';
+import { GOAL_HALF_WIDTH, GOAL_HEIGHT, GOAL_WIDTH as GOAL_WIDTH_M } from '@/engine/balance/shot';
 
 import { drawAthlete } from './athlete';
 import {
@@ -36,6 +36,14 @@ import type { MatchRenderer, ShotScene } from './types';
  * entropy, or the same scene would draw differently on every frame of an
  * animation. Enough variety that a wall of defenders is not one man cloned.
  */
+/**
+ * Pixels the backdrop is painted past every edge.
+ *
+ * Screen shake translates the whole world; without this the shift uncovers a
+ * strip of bare canvas at the top of the frame on every goal.
+ */
+const OVERDRAW = 48;
+
 function extraAppearance(index: number): Appearance {
   const spin = (offset: number, span: number) => (index * 7 + offset * 3) % span;
 
@@ -82,6 +90,15 @@ export class CanvasShotRenderer implements MatchRenderer {
 
     const flight = scene.ballFlight;
     const ballInNet = flight !== null && flight.metresFromGoal < 0;
+    const effects = scene.effects;
+
+    // Screen shake moves the whole world, overlay included — a HUD that stays
+    // rock steady while the pitch shakes reads as a bug.
+    ctx.save();
+    if (effects && (effects.shakeX !== 0 || effects.shakeY !== 0)) {
+      const unit = Math.min(view.width, view.height);
+      ctx.translate(effects.shakeX * unit, effects.shakeY * unit);
+    }
 
     this.drawSky(ctx, camera, view);
     this.drawStands(ctx, camera, view);
@@ -97,15 +114,28 @@ export class CanvasShotRenderer implements MatchRenderer {
     this.drawDefenders(ctx, scene, camera, view);
 
     if (scene.aim) this.drawReticle(ctx, scene, camera, view);
+    if (effects) this.drawTrail(ctx, scene, camera, view, effects);
     if (flight && !ballInNet) this.drawBall(ctx, scene, camera, view, flight);
     if (!flight) this.drawStaticBall(ctx, scene, camera, view);
     if (scene.ballMark) this.drawBallMark(ctx, scene, camera, view);
+    if (effects) this.drawTurf(ctx, scene, camera, view, effects);
 
     // The shooter is deliberately not drawn here. A body close enough to the
     // camera to be recognisable is also big enough to cover the goal and the
     // reticle — which is exactly what the first pass did. The athlete gets
     // his own framing, at size, in the moment card and the profile screen.
     this.drawVignette(ctx, view);
+
+    ctx.restore();
+
+    // The goal bloom sits outside the shake, so it fills the frame rather
+    // than sliding a bright rectangle around inside it.
+    if (effects && effects.flash > 0) {
+      // Gentle: at 0.3 the bloom washed the whole pitch milky and the goal
+      // read as a rendering fault rather than a celebration.
+      ctx.fillStyle = `rgba(232, 255, 240, ${String(effects.flash * 0.14)})`;
+      ctx.fillRect(0, 0, view.width, view.height);
+    }
   }
 
   // ------------------------------------------------------------ atmosphere
@@ -115,7 +145,8 @@ export class CanvasShotRenderer implements MatchRenderer {
     sky.addColorStop(0, SKY.top);
     sky.addColorStop(1, SKY.horizon);
     ctx.fillStyle = sky;
-    ctx.fillRect(0, 0, view.width, camera.horizonY);
+    // Overdrawn past the frame so screen shake never exposes bare canvas.
+    ctx.fillRect(-OVERDRAW, -OVERDRAW, view.width + OVERDRAW * 2, camera.horizonY + OVERDRAW);
 
     // Floodlight glow from the top corners.
     for (const x of [view.width * 0.16, view.width * 0.84]) {
@@ -139,7 +170,7 @@ export class CanvasShotRenderer implements MatchRenderer {
     const top = base - tierHeight;
 
     ctx.fillStyle = STADIUM.standBack;
-    ctx.fillRect(0, top, view.width, tierHeight);
+    ctx.fillRect(-OVERDRAW, top, view.width + OVERDRAW * 2, tierHeight);
 
     // Crowd speckle: two colours interleaved, denser and dimmer towards the
     // back so the tier reads as having depth.
@@ -189,7 +220,12 @@ export class CanvasShotRenderer implements MatchRenderer {
     grass.addColorStop(0.45, GRASS.mid);
     grass.addColorStop(1, GRASS.near);
     ctx.fillStyle = grass;
-    ctx.fillRect(0, horizon, view.width, view.height - horizon);
+    ctx.fillRect(
+      -OVERDRAW,
+      horizon,
+      view.width + OVERDRAW * 2,
+      view.height - horizon + OVERDRAW,
+    );
 
     // Mowing stripes: bands of equal world depth, so they compress towards
     // the horizon on their own. Drawn as light modulation over the gradient
@@ -312,35 +348,47 @@ export class CanvasShotRenderer implements MatchRenderer {
     ctx.closePath();
     ctx.fill();
 
-    // Mesh on the back of the net.
+    // Mesh on the back of the net, drawn point by point so the ball can
+    // deform it. A flat net swallows a goal without acknowledging it.
+    const impact = scene.effects?.netImpact ?? null;
+    const columns = 16;
+    const rows = 8;
+
+    const meshPoint = (u: number, v: number) => {
+      const gx = -GOAL_HALF_WIDTH + GOAL_WIDTH_M * u;
+      const gy = GOAL_HEIGHT * 0.82 * (1 - v);
+
+      let bulge = 0;
+      if (impact) {
+        // A gaussian dent centred where the ball went in, pushing the mesh
+        // away from the pitch.
+        const d2 = (gx - impact.x) ** 2 + (gy - impact.y) ** 2;
+        bulge = impact.strength * 1.15 * Math.exp(-d2 / 1.1);
+      }
+
+      return project(gx, gy, backDepth + bulge, camera, view);
+    };
+
     ctx.strokeStyle = GOAL.net;
     ctx.lineWidth = 1;
-    const columns = 16;
+
     for (let i = 0; i <= columns; i += 1) {
-      const u = i / columns;
       ctx.beginPath();
-      ctx.moveTo(
-        backTopLeft.sx + (backTopRight.sx - backTopLeft.sx) * u,
-        backTopLeft.sy + (backTopRight.sy - backTopLeft.sy) * u,
-      );
-      ctx.lineTo(
-        backLeft.sx + (backRight.sx - backLeft.sx) * u,
-        backLeft.sy + (backRight.sy - backLeft.sy) * u,
-      );
+      for (let j = 0; j <= rows; j += 1) {
+        const p = meshPoint(i / columns, j / rows);
+        if (j === 0) ctx.moveTo(p.sx, p.sy);
+        else ctx.lineTo(p.sx, p.sy);
+      }
       ctx.stroke();
     }
-    const rows = 8;
-    for (let i = 0; i <= rows; i += 1) {
-      const v = i / rows;
+
+    for (let j = 0; j <= rows; j += 1) {
       ctx.beginPath();
-      ctx.moveTo(
-        backTopLeft.sx + (backLeft.sx - backTopLeft.sx) * v,
-        backTopLeft.sy + (backLeft.sy - backTopLeft.sy) * v,
-      );
-      ctx.lineTo(
-        backTopRight.sx + (backRight.sx - backTopRight.sx) * v,
-        backTopRight.sy + (backRight.sy - backTopRight.sy) * v,
-      );
+      for (let i = 0; i <= columns; i += 1) {
+        const p = meshPoint(i / columns, j / rows);
+        if (i === 0) ctx.moveTo(p.sx, p.sy);
+        else ctx.lineTo(p.sx, p.sy);
+      }
       ctx.stroke();
     }
 
@@ -526,6 +574,50 @@ export class CanvasShotRenderer implements MatchRenderer {
     ctx.save();
     ctx.globalAlpha = flight.alpha;
     this.ballAt(ctx, p.sx, p.sy, p.scale, ground.sy);
+    ctx.restore();
+  }
+
+  /** Ghosts of the ball's recent positions, fading and shrinking. */
+  private drawTrail(
+    ctx: CanvasRenderingContext2D,
+    scene: ShotScene,
+    camera: Camera,
+    view: Viewport,
+    effects: NonNullable<ShotScene['effects']>,
+  ): void {
+    ctx.save();
+    effects.trail.forEach((point, index) => {
+      const fade = 1 - index / (effects.trail.length + 1);
+      const depth = depthOf(point.metresFromGoal, scene.distance, camera);
+      const p = project(point.x, point.y, depth, camera, view);
+
+      ctx.globalAlpha = fade * 0.6;
+      ctx.fillStyle = BALL.trail;
+      ctx.beginPath();
+      ctx.arc(p.sx, p.sy, Math.max(1, p.scale * 0.11 * fade), 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.restore();
+  }
+
+  /** Turf kicked up by the strike. */
+  private drawTurf(
+    ctx: CanvasRenderingContext2D,
+    scene: ShotScene,
+    camera: Camera,
+    view: Viewport,
+    effects: NonNullable<ShotScene['effects']>,
+  ): void {
+    if (effects.turf.length === 0) return;
+
+    ctx.save();
+    ctx.fillStyle = GRASS.far;
+    for (const speck of effects.turf) {
+      const depth = depthOf(speck.metresFromGoal, scene.distance, camera);
+      const p = project(speck.x, speck.y, depth, camera, view);
+      ctx.globalAlpha = speck.alpha;
+      ctx.fillRect(p.sx, p.sy, Math.max(1, p.scale * 0.035), Math.max(1, p.scale * 0.05));
+    }
     ctx.restore();
   }
 
