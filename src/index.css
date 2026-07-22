@@ -15,8 +15,52 @@
   --color-noite-950: #060a14;
 }
 
+/* Type and shape.
+ *
+ * No web fonts: the game must open instantly and work offline, and a font
+ * file is the single heaviest thing a PWA can wait on. The sports-broadcast
+ * feel comes from weight and tight tracking on the system stack instead.
+ */
+@theme {
+  --font-display:
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI Variable Display', 'Segoe UI', Roboto,
+    'Helvetica Neue', sans-serif;
+
+  --text-scoreline: 1.75rem;
+  --text-scoreline--line-height: 1;
+  --text-scoreline--letter-spacing: -0.045em;
+  --text-scoreline--font-weight: 800;
+
+  --text-verdict: 2.25rem;
+  --text-verdict--line-height: 1.05;
+  --text-verdict--letter-spacing: -0.03em;
+  --text-verdict--font-weight: 900;
+
+  --text-eyebrow: 0.6875rem;
+  --text-eyebrow--line-height: 1;
+  --text-eyebrow--letter-spacing: 0.22em;
+  --text-eyebrow--font-weight: 600;
+
+  --radius-chip: 0.75rem;
+  --radius-panel: 1.25rem;
+}
+
 :root {
   color-scheme: dark;
+}
+
+/* Numbers that change in place — scores, clocks, ratings — must not jiggle. */
+.numeric {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+/* Small caps label above a value. Used across HUD and summary screens. */
+.eyebrow {
+  font-size: var(--text-eyebrow);
+  letter-spacing: var(--text-eyebrow--letter-spacing);
+  font-weight: var(--text-eyebrow--font-weight);
+  text-transform: uppercase;
 }
 
 html,

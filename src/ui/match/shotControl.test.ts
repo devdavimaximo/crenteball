@@ -86,20 +86,54 @@ describe('previewSwipe', () => {
 });
 
 describe('unprojectAtDepth — the finger becomes an aim', () => {
-  it('is the exact inverse of project', () => {
+  it('is the exact inverse of project, at every angle the camera turns to', () => {
+    // The control depends on this being exact. A yaw makes the goal plane
+    // oblique to the view axis, so the inverse is a ray-plane intersection
+    // rather than a division — and an error here would quietly send every
+    // angled shot somewhere other than where the player aimed.
     const viewport = { width: 360, height: 640 };
-    const camera = cameraFor(16, 12, viewport);
-    const depth = depthOf(0, 16, camera);
 
-    for (const [x, y] of [
-      [0, 1.2],
-      [-3.2, 0.3],
-      [3.6, 2.4],
-    ] as const) {
-      const screen = project(x, y, depth, camera, viewport);
-      const world = unprojectAtDepth(screen.sx, screen.sy, depth, camera, viewport);
-      expect(world.x).toBeCloseTo(x, 6);
-      expect(world.y).toBeCloseTo(y, 6);
+    for (const angle of [-40, -22, -8, 0, 8, 22, 40]) {
+      for (const distance of [7, 16, 31]) {
+        const camera = cameraFor(distance, angle, viewport);
+        const depth = depthOf(0, distance, camera);
+
+        for (const [x, y] of [
+          [0, 1.2],
+          [-3.2, 0.3],
+          [3.6, 2.4],
+        ] as const) {
+          const screen = project(x, y, depth, camera, viewport);
+          const world = unprojectAtDepth(screen.sx, screen.sy, depth, camera, viewport);
+
+          const label = `${String(distance)}m @${String(angle)}deg`;
+          expect(world.x, label).toBeCloseTo(x, 5);
+          expect(world.y, label).toBeCloseTo(y, 5);
+        }
+      }
     }
+  });
+
+  it('turns the camera towards the goal, never away from it', () => {
+    const viewport = { width: 360, height: 640 };
+    expect(cameraFor(20, 0, viewport).yaw).toBeCloseTo(0, 6);
+    expect(cameraFor(20, 30, viewport).yaw).toBeGreaterThan(0);
+    expect(cameraFor(20, -30, viewport).yaw).toBeLessThan(0);
+  });
+
+  it('splits the offset instead of centring one and losing the other', () => {
+    // The whole point of turning half way: neither the goal nor the ball
+    // ends up pinned to an edge.
+    const viewport = { width: 360, height: 640 };
+    const camera = cameraFor(26, 34, viewport);
+    const goalDepth = depthOf(0, 26, camera);
+
+    const goal = project(0, 0, goalDepth, camera, viewport);
+    const ball = project(camera.x, 0, camera.backOff, camera, viewport);
+
+    expect(goal.sx).toBeLessThan(viewport.width / 2);
+    expect(ball.sx).toBeGreaterThan(viewport.width / 2);
+    expect(goal.sx).toBeGreaterThan(0);
+    expect(ball.sx).toBeLessThan(viewport.width);
   });
 });

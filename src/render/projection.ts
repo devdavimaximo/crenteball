@@ -28,6 +28,12 @@ export interface Camera {
   readonly focal: number;
   /** Screen y of the horizon line. */
   readonly horizonY: number;
+  /**
+   * Radians the camera is turned towards the goal. Zero looks straight down
+   * the pitch. A yaw keeps verticals vertical, so the goal frame and every
+   * body stay upright.
+   */
+  readonly yaw: number;
 }
 
 /** A projected point plus the scale objects at that depth should be drawn at. */
@@ -73,6 +79,12 @@ const GOAL_SAFE_FRACTION = 0.45;
 const MIN_BACK_OFF = 1.2;
 const MAX_BACK_OFF = 9;
 
+/** Share of the way towards the goal the camera turns. */
+const YAW_FOLLOW = 0.5;
+
+/** How far off-centre the ball may sit, as a fraction of the half width. */
+const BALL_SAFE_FRACTION = 0.33;
+
 /**
  * Builds the camera for a scene.
  *
@@ -94,16 +106,26 @@ export function cameraFor(distance: number, angleDeg: number, viewport: Viewport
   // Vertical budget: how far below the horizon the ball is allowed to land.
   const verticalBudget = Math.max(1, viewport.height * BALL_SCREEN_FRACTION - horizonY);
 
-  // How wide the lens may be before the goal — offset sideways by the shot's
-  // angle — starts leaving the frame.
-  const offsetInGoalWidths = Math.abs(ballX) / GOAL_WIDTH;
-  const fitFraction = GOAL_SAFE_FRACTION / (offsetInGoalWidths + 0.5);
+  // Turning the camera fully onto the goal only swaps who sits off-centre —
+  // the goal centres and the ball swings out by the same amount. Turning half
+  // way splits the offset between them, so both stay near the middle and the
+  // lens no longer has to shrink to a fisheye for a wide chance.
+  const roughDepth = distance + 3;
+  const yaw = Math.atan2(ballX, roughDepth) * YAW_FOLLOW;
+
+  // What is left off-centre after the turn, measured in goal widths.
+  const goalOffset = (Math.abs(ballX) * (1 - YAW_FOLLOW)) / GOAL_WIDTH;
+  const ballOffset = (Math.abs(ballX) * YAW_FOLLOW) / GOAL_WIDTH;
+
+  const fitFraction = GOAL_SAFE_FRACTION / (goalOffset + 0.5);
+  // The ball has to stay on screen too, and it is what the player aims from.
+  const ballFitFraction = ballOffset > 0 ? BALL_SAFE_FRACTION / ballOffset : Infinity;
 
   const t = Math.min(1, Math.max(0, (distance - NEAR_DISTANCE) / (FAR_DISTANCE - NEAR_DISTANCE)));
   const rangeFraction =
     GOAL_FRACTION_NEAR + (GOAL_FRACTION_FAR - GOAL_FRACTION_NEAR) * t ** 0.62;
 
-  const goalFraction = Math.min(rangeFraction, fitFraction);
+  const goalFraction = Math.min(rangeFraction, fitFraction, ballFitFraction);
 
   // The lens the goal framing asks for can be longer than the vertical budget
   // allows: on a wide screen, a goal filling half the *width* needs a lens
@@ -128,11 +150,13 @@ export function cameraFor(distance: number, angleDeg: number, viewport: Viewport
     // Slightly raised: looking a little down opens the goal mouth and shows
     // the pitch, instead of a flat eye-level band of grass.
     height: CAMERA_HEIGHT,
-    // Tracking the ball exactly keeps it centred; anything else is amplified
-    // by how close it is and throws it clean out of frame.
+    // The camera sits at the ball's line and turns; moving it sideways
+    // instead is amplified by how close the ball is and throws it out of
+    // frame entirely.
     x: ballX,
     focal,
     horizonY,
+    yaw,
   };
 }
 
@@ -149,11 +173,19 @@ export function project(
   camera: Camera,
   viewport: Viewport,
 ): Projected {
-  const d = Math.max(0.5, depth);
-  const scale = camera.focal / d;
+  const lateral = x - camera.x;
+
+  // Rotate the point into camera space. `depth` stays a world measurement —
+  // metres down the pitch — so callers never have to think about the yaw.
+  const cos = Math.cos(camera.yaw);
+  const sin = Math.sin(camera.yaw);
+  const alongView = Math.max(0.5, -lateral * sin + depth * cos);
+  const acrossView = lateral * cos + depth * sin;
+
+  const scale = camera.focal / alongView;
 
   return {
-    sx: viewport.width / 2 + (x - camera.x) * scale,
+    sx: viewport.width / 2 + acrossView * scale,
     sy: camera.horizonY + (camera.height - y) * scale,
     scale,
   };
@@ -178,10 +210,21 @@ export function unprojectAtDepth(
   viewport: Viewport,
 ): { x: number; y: number } {
   const d = Math.max(0.5, depth);
-  const scale = camera.focal / d;
+  const cos = Math.cos(camera.yaw);
+  const sin = Math.sin(camera.yaw);
+
+  // With a yaw, the goal plane is no longer perpendicular to the view axis,
+  // so this solves where the pixel's ray crosses the plane at world `depth`
+  // rather than simply dividing by a scale.
+  const k = (sx - viewport.width / 2) / camera.focal;
+  const denominator = cos + k * sin;
+  const lateral =
+    Math.abs(denominator) < 1e-6 ? 0 : (d * (k * cos - sin)) / denominator;
+
+  const alongView = Math.max(0.5, -lateral * sin + d * cos);
 
   return {
-    x: camera.x + (sx - viewport.width / 2) / scale,
-    y: camera.height - (sy - camera.horizonY) / scale,
+    x: camera.x + lateral,
+    y: camera.height - ((sy - camera.horizonY) * alongView) / camera.focal,
   };
 }

@@ -35,7 +35,7 @@ function ExitButton() {
     <a
       href="#"
       aria-label={t('hud.exit')}
-      className="pointer-events-auto flex size-9 items-center justify-center rounded-xl bg-noite-900/75 text-white/70 backdrop-blur-sm"
+      className="pointer-events-auto flex size-10 items-center justify-center rounded-chip bg-noite-950/70 text-lg text-white/70 ring-1 ring-white/10 backdrop-blur-md"
     >
       ←
     </a>
@@ -44,8 +44,8 @@ function ExitButton() {
 
 const BAND_CLASS = {
   standout: 'bg-relva-500 text-white',
-  solid: 'bg-white/15 text-white',
-  poor: 'bg-amber-600/80 text-white',
+  solid: 'bg-noite-950/70 text-white backdrop-blur-md',
+  poor: 'bg-amber-600/85 text-white',
 } as const;
 
 function energyClass(energy: number): string {
@@ -71,28 +71,28 @@ export function MatchHud({
       <div className="flex items-center gap-2">
         <ExitButton />
 
-        {/* Scoreline */}
-        <div className="flex items-center gap-2 rounded-xl bg-noite-900/75 px-3 py-1.5 backdrop-blur-sm">
-          <span className="text-sm font-semibold tracking-wide">{homeShort}</span>
-          <span className="text-lg font-black tabular-nums">
+        {/* Scoreline: the club codes sit quiet, the numbers carry the weight. */}
+        <div className="flex items-center gap-2.5 rounded-chip bg-noite-950/70 px-3 py-2 ring-1 ring-white/10 backdrop-blur-md">
+          <span className="text-xs font-bold tracking-[0.08em] text-white/70">{homeShort}</span>
+          <span className="numeric text-scoreline">
             {homeGoals}
-            <span className="px-1 text-white/40">×</span>
+            <span className="px-1 font-normal text-white/25">–</span>
             {awayGoals}
           </span>
-          <span className="text-sm font-semibold tracking-wide">{awayShort}</span>
+          <span className="text-xs font-bold tracking-[0.08em] text-white/70">{awayShort}</span>
         </div>
 
         {/* Clock */}
-        <div className="rounded-xl bg-noite-900/75 px-2.5 py-1.5 text-sm font-semibold tabular-nums backdrop-blur-sm">
+        <div className="numeric rounded-chip bg-noite-950/70 px-2.5 py-2 text-sm font-bold ring-1 ring-white/10 backdrop-blur-md">
           {minute}
-          <span className="text-white/50">′</span>
+          <span className="font-normal text-white/40">′</span>
         </div>
 
         <div className="flex-1" />
 
         {/* Live rating */}
         <div
-          className={`rounded-xl px-2.5 py-1.5 text-sm font-black tabular-nums ${BAND_CLASS[ratingBand(rating)]}`}
+          className={`numeric rounded-chip px-3 py-2 text-base font-black ring-1 ring-white/10 ${BAND_CLASS[ratingBand(rating)]}`}
           aria-label={t('hud.rating')}
         >
           {rating.toFixed(1)}
@@ -100,16 +100,17 @@ export function MatchHud({
       </div>
 
       {/* Energy */}
-      <div className="flex items-center gap-2">
-        <span className="text-[0.65rem] font-medium uppercase tracking-[0.18em] text-white/50">
-          {t('hud.energy')}
-        </span>
-        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/15">
+      <div className="flex items-center gap-2.5">
+        <span className="eyebrow text-white/40">{t('hud.energy')}</span>
+        <div className="h-1 flex-1 overflow-hidden rounded-full bg-white/12">
           <div
             className={`h-full rounded-full transition-[width] duration-300 ${energyClass(energy)}`}
             style={{ width: `${String(Math.max(0, Math.min(100, energy)))}%` }}
           />
         </div>
+        <span className="numeric text-[0.7rem] font-semibold text-white/40">
+          {Math.round(energy)}
+        </span>
       </div>
     </div>
   );

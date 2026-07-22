@@ -266,24 +266,28 @@ export function MatchPrototype() {
       {/* Moment card / outcome / hint. */}
       <div className="pointer-events-none absolute inset-x-0 bottom-24 px-6 text-center">
         {phase === 'intro' && moment && (
-          <>
-            <p className="text-xs font-medium uppercase tracking-[0.25em] text-relva-300">
+          <div className="mx-auto max-w-xs rounded-panel bg-noite-950/70 px-6 py-5 ring-1 ring-white/10 backdrop-blur-md">
+            <p className="eyebrow text-relva-300">
               {t('match.momentOf', { n: index + 1, total: plan.moments.length })}
             </p>
-            <p className="mt-1 text-2xl font-black text-white drop-shadow">
+            <p className="mt-2.5 text-verdict text-white">
               {t(`match.moment.${moment.type}` as TranslationKey)}
             </p>
-            <p className="mt-1 text-xs text-white/50">{t('match.tapToContinue')}</p>
-          </>
+            <p className="mt-3 text-xs font-medium text-white/45">{t('match.tapToContinue')}</p>
+          </div>
         )}
 
         {phase === 'aiming' && !aim && (
-          <p className="text-sm text-white/50">{t('shot.hint')}</p>
+          <p className="text-sm font-medium text-white/55 drop-shadow">{t('shot.hint')}</p>
         )}
 
         {phase === 'outcome' && shot && (
           <>
-            <p className="text-3xl font-black text-white drop-shadow">
+            <p
+              className={`text-verdict drop-shadow-lg ${
+                shot.outcome === 'goal' ? 'text-relva-300' : 'text-white'
+              }`}
+            >
               {t(
                 (
                   {
@@ -296,47 +300,56 @@ export function MatchPrototype() {
                 )[shot.outcome],
               )}
             </p>
-            <p className="mt-1 text-xs text-white/50">{t('match.tapToContinue')}</p>
+            <p className="mt-2 text-xs font-medium text-white/45">{t('match.tapToContinue')}</p>
           </>
         )}
       </div>
 
       {/* Full time. */}
       {phase === 'fulltime' && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-noite-950/85 px-8 text-center backdrop-blur-sm">
-          <p className="text-xs font-medium uppercase tracking-[0.3em] text-relva-300">
-            {t('match.fullTime')}
-          </p>
-          <p className="text-5xl font-black tabular-nums text-white">
-            {full.team} <span className="text-white/30">×</span> {full.opponent}
-          </p>
-          <p className="text-lg font-semibold text-white/80">{t(verdict)}</p>
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-5 bg-noite-950/88 px-8 text-center backdrop-blur-md">
+          <p className="eyebrow text-relva-300">{t('match.fullTime')}</p>
 
-          <dl className="mt-2 grid grid-cols-3 gap-6 text-white">
-            <div>
-              <dt className="text-[0.65rem] uppercase tracking-wider text-white/45">
-                {t('match.yourRating')}
-              </dt>
-              <dd className="text-2xl font-black tabular-nums">{stats.rating.toFixed(1)}</dd>
-            </div>
-            <div>
-              <dt className="text-[0.65rem] uppercase tracking-wider text-white/45">
-                {t('match.yourGoals')}
-              </dt>
-              <dd className="text-2xl font-black tabular-nums">{stats.goals}</dd>
-            </div>
-            <div>
-              <dt className="text-[0.65rem] uppercase tracking-wider text-white/45">
-                {t('match.shots')}
-              </dt>
-              <dd className="text-2xl font-black tabular-nums">{stats.shots}</dd>
-            </div>
+          <div>
+            <p className="numeric text-6xl font-black tracking-tighter text-white">
+              {full.team}
+              <span className="px-2 font-normal text-white/25">–</span>
+              {full.opponent}
+            </p>
+            <p className="mt-2 text-sm font-bold tracking-[0.06em] text-white/60">
+              {CLUB.short} <span className="text-white/25">·</span> {OPPONENT.short}
+            </p>
+          </div>
+
+          <p
+            className={`text-lg font-black tracking-tight ${
+              verdict === 'match.won'
+                ? 'text-relva-300'
+                : verdict === 'match.lost'
+                  ? 'text-white/50'
+                  : 'text-white/75'
+            }`}
+          >
+            {t(verdict)}
+          </p>
+
+          <dl className="mt-1 grid w-full max-w-xs grid-cols-3 gap-px overflow-hidden rounded-panel bg-white/10 text-white ring-1 ring-white/10">
+            {[
+              [t('match.yourRating'), stats.rating.toFixed(1)],
+              [t('match.yourGoals'), String(stats.goals)],
+              [t('match.shots'), String(stats.shots)],
+            ].map(([label, value]) => (
+              <div key={label} className="bg-noite-950 px-2 py-3.5">
+                <dt className="eyebrow text-white/40">{label}</dt>
+                <dd className="numeric mt-1.5 text-2xl font-black">{value}</dd>
+              </div>
+            ))}
           </dl>
 
           <button
             type="button"
             onClick={restart}
-            className="mt-4 min-h-12 rounded-full bg-relva-500 px-8 text-sm font-bold text-white"
+            className="mt-2 min-h-12 rounded-full bg-relva-500 px-8 text-sm font-bold tracking-tight text-white transition-transform active:scale-95"
           >
             {t('match.playAgain')}
           </button>
