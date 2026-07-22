@@ -2,13 +2,16 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { GOAL_HALF_WIDTH, GOAL_HEIGHT } from '@/engine/balance/shot';
 import { createRng, deriveSeed } from '@/engine/rng';
-import { aimingError, resolveShot } from '@/engine/sim/shot';
+import { aimingError, chanceQuality, resolveShot } from '@/engine/sim/shot';
 import type { ShotContext, ShotOutcome } from '@/engine/sim/shot';
+import { matchPerformance } from '@/engine/systems/rating';
+import type { RatedShot } from '@/engine/systems/rating';
 import { cameraFor, depthOf, unprojectAtDepth } from '@/render/projection';
 import { sampleShotAnimation } from '@/render/shotAnimation';
 import type { ShotAnimationSpec } from '@/render/shotAnimation';
 import { CanvasShotRenderer } from '@/render/shotSceneRenderer';
 import type { DefenderMarker, ShotScene } from '@/render/types';
+import { MatchHud } from '@/ui/match/MatchHud';
 import { defaultSwipeConfig, previewSwipe, readSwipe } from '@/ui/match/shotControl';
 import type { SwipeSample } from '@/ui/match/shotControl';
 import { t } from '@/ui/i18n';
@@ -81,7 +84,8 @@ export function ShotPlayground() {
   const [aim, setAim] = useState<ShotScene['aim']>(null);
   const [power, setPower] = useState(0);
   const [result, setResult] = useState<Result | null>(null);
-  const [tally, setTally] = useState({ shots: 0, goals: 0 });
+  /** Every shot of the session, so the rating is recomputed, never nudged. */
+  const [history, setHistory] = useState<RatedShot[]>([]);
 
   const preset = PRESETS[presetIndex % PRESETS.length] as Preset;
 
@@ -299,14 +303,23 @@ export function ShotPlayground() {
         blockDepth: nearestDefender,
       },
       () => {
-        setTally((c) => ({
-          shots: c.shots + 1,
-          goals: c.goals + (shot.outcome === 'goal' ? 1 : 0),
-        }));
+        setHistory((shots) => [
+          ...shots,
+          { outcome: shot.outcome, quality: chanceQuality(shotContext) },
+        ]);
         setResult({ outcome: shot.outcome, markX: shot.targetX, markY: shot.targetY });
       },
     );
   };
+
+  // Named `stats`, not `performance`: that shadows the global used by
+  // performance.now() in the swipe and animation clocks.
+  const stats = matchPerformance(history);
+  // Stand-in match state until M3.7 runs a real fixture: the clock advances
+  // with each attempt and the opponent is a fixed 1, so the HUD can be judged
+  // against a scoreline that changes.
+  const minute = Math.min(90, 6 + history.length * 11);
+  const energy = Math.max(20, 100 - history.length * 6);
 
   return (
     <main className="relative h-full touch-none select-none">
@@ -319,10 +332,20 @@ export function ShotPlayground() {
         onPointerCancel={onPointerUp}
       />
 
-      <div className="pointer-events-none absolute inset-x-0 top-0 flex items-center justify-between px-4 py-3 text-white">
+      <MatchHud
+        homeShort="AGU"
+        awayShort="SLM"
+        homeGoals={stats.goals}
+        awayGoals={1}
+        minute={minute}
+        energy={energy}
+        rating={stats.rating}
+      />
+
+      <div className="absolute inset-x-0 bottom-0 flex items-center justify-between px-4 pb-5">
         <button
           type="button"
-          className="pointer-events-auto min-h-11 rounded-full bg-white/10 px-4 text-sm font-semibold"
+          className="min-h-11 rounded-full bg-white/10 px-4 text-sm font-semibold text-white"
           onClick={() => {
             setPresetIndex((i) => i + 1);
             setResult(null);
@@ -331,20 +354,20 @@ export function ShotPlayground() {
         >
           {preset.label} ↻
         </button>
-        <span className="text-xs text-white/60">
-          {t('shot.tally', { goals: tally.goals, shots: tally.shots })}
+        <span className="text-xs text-white/50">
+          {t('shot.tally', { goals: stats.goals, shots: stats.shots })}
         </span>
       </div>
 
       {/* Power bar, only while charging. */}
       {aim && (
-        <div className="pointer-events-none absolute bottom-6 left-1/2 h-2 w-40 -translate-x-1/2 overflow-hidden rounded-full bg-white/15">
+        <div className="pointer-events-none absolute bottom-20 left-1/2 h-2 w-40 -translate-x-1/2 overflow-hidden rounded-full bg-white/15">
           <div className="h-full bg-relva-300" style={{ width: `${String(power * 100)}%` }} />
         </div>
       )}
 
       {/* Outcome + hint. */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-12 text-center">
+      <div className="pointer-events-none absolute inset-x-0 bottom-24 text-center">
         {result ? (
           <p className="text-2xl font-black text-white drop-shadow">
             {t(OUTCOME_KEY[result.outcome])}

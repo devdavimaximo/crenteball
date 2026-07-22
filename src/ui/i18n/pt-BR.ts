@@ -9,6 +9,9 @@ export const ptBR = {
   'boot.milestone': 'M0',
   'boot.tagline': 'Fundação técnica no lugar. O núcleo do jogo começa no M1.',
 
+  'hud.energy': 'Energia',
+  'hud.rating': 'Nota da partida',
+
   'shot.hint': 'Deslize da bola em direção ao gol',
   'shot.again': 'Toque para tentar de novo',
   'shot.tally': '{goals} gols em {shots} chutes',
