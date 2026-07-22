@@ -14,6 +14,7 @@
 import {
   AWAY_ATTACK_MULTIPLIER,
   BASE_EXPECTED_GOALS,
+  FINISHING_EXPONENT,
   FINISHING_REFERENCE,
   HOME_ATTACK_MULTIPLIER,
   MATCH_MINUTES,
@@ -103,7 +104,7 @@ function pickScorer(squad: readonly SquadPlayer[], rng: Rng): SquadPlayer {
       [
         player,
         SCORING_WEIGHT_BY_POSITION[player.position] *
-          (player.attributes.finishing / FINISHING_REFERENCE),
+          (player.attributes.finishing / FINISHING_REFERENCE) ** FINISHING_EXPONENT,
       ] as const,
   );
 

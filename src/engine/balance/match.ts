@@ -59,4 +59,15 @@ export const SCORING_WEIGHT_BY_POSITION = {
 /** Finishing is divided by this before weighting, so it scales rather than dominates. */
 export const FINISHING_REFERENCE = 50;
 
+/**
+ * How sharply finishing concentrates goals on the best strikers.
+ *
+ * Linear (1) spread goals too evenly: the league's top scorer averaged 16.8
+ * over 20 simulated seasons, against a real 20-25 in a 38-round division. A
+ * squared weight reflects that the best finisher is not merely slightly more
+ * likely to score — he is the one the team plays through, and he takes the
+ * penalties.
+ */
+export const FINISHING_EXPONENT = 2;
+
 export const MATCH_MINUTES = 90;
