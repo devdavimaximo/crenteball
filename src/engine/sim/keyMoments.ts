@@ -80,7 +80,8 @@ export function momentCountFor(context: MatchPlanContext, rng: Rng): number {
   return Math.min(MAX_MOMENTS, Math.max(MIN_MOMENTS, count));
 }
 
-function pickType(position: Position, rng: Rng): KeyMomentType {
+/** Picks a moment type for a position, weighted. Shared with the spatial generator. */
+export function pickMomentType(position: Position, rng: Rng): KeyMomentType {
   const weights = MOMENT_WEIGHTS[position];
   const entries = Object.entries(weights)
     .filter(([, weight]) => weight > 0)
@@ -106,7 +107,8 @@ function geometryFor(type: KeyMomentType, rng: Rng): { distance: number; angle: 
  * which guarantees the spacing instead of rejecting and retrying draws. A
  * player should never face two decisive moments in the same passage of play.
  */
-function spreadMinutes(count: number, rng: Rng): number[] {
+/** Spreads `count` minutes across the match without bunching. Shared. */
+export function spreadMinutes(count: number, rng: Rng): number[] {
   const span = LAST_POSSIBLE_MINUTE - FIRST_POSSIBLE_MINUTE;
   const window = span / count;
 
@@ -126,7 +128,7 @@ export function generateKeyMoments(context: MatchPlanContext, rng: Rng): KeyMome
   const count = momentCountFor(context, rng);
   const minutes = spreadMinutes(count, rng);
 
-  const types = minutes.map(() => pickType(context.position, rng));
+  const types = minutes.map(() => pickMomentType(context.position, rng));
 
   // Guarantee the player's signature moment. Drawn independently rather than
   // forced into a fixed slot, so it is not always the same minute of the match.

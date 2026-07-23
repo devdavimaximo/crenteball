@@ -13,6 +13,7 @@ export type KeyMomentType =
   | 'header'
   | 'through-ball'
   | 'dribble'
+  | 'cross'
   | 'free-kick'
   | 'penalty'
   | 'tackle'
@@ -23,6 +24,7 @@ export const KEY_MOMENT_TYPES = [
   'header',
   'through-ball',
   'dribble',
+  'cross',
   'free-kick',
   'penalty',
   'tackle',
@@ -61,6 +63,7 @@ export const MOMENT_WEIGHTS: Readonly<Record<Position, Readonly<Record<KeyMoment
     header: 0,
     'through-ball': 0.1,
     dribble: 0,
+    cross: 0,
     'free-kick': 0,
     penalty: 0,
     tackle: 0.15,
@@ -71,6 +74,7 @@ export const MOMENT_WEIGHTS: Readonly<Record<Position, Readonly<Record<KeyMoment
     header: 0.35,
     'through-ball': 0.2,
     dribble: 0.08,
+    cross: 0.25,
     'free-kick': 0.05,
     penalty: 0.02,
     tackle: 1,
@@ -81,6 +85,7 @@ export const MOMENT_WEIGHTS: Readonly<Record<Position, Readonly<Record<KeyMoment
     header: 0.15,
     'through-ball': 1,
     dribble: 0.6,
+    cross: 0.5,
     'free-kick': 0.22,
     penalty: 0.06,
     tackle: 0.45,
@@ -91,6 +96,7 @@ export const MOMENT_WEIGHTS: Readonly<Record<Position, Readonly<Record<KeyMoment
     header: 0.45,
     'through-ball': 0.35,
     dribble: 0.6,
+    cross: 0.4,
     'free-kick': 0.12,
     penalty: 0.1,
     tackle: 0.05,
@@ -113,6 +119,7 @@ export const MOMENT_GEOMETRY: Readonly<
   header: { distance: [3, 12], angle: 28 },
   'through-ball': { distance: [18, 45], angle: 45 },
   dribble: { distance: [15, 40], angle: 42 },
+  cross: { distance: [12, 30], angle: 52 },
   'free-kick': { distance: [18, 32], angle: 30 },
   penalty: { distance: [11, 11], angle: 0 },
   tackle: { distance: [30, 75], angle: 50 },
