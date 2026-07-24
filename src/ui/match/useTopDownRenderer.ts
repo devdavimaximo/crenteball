@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { PixiTopDownRenderer } from '@/render/PixiTopDownRenderer';
-import type { TopDownScene } from '@/render/topdownScene';
+import type { TopDownEffects, TopDownScene } from '@/render/topdownScene';
 
 /**
  * Owns the PixiJS renderer lifecycle for a React screen, and draws `scene`.
@@ -51,8 +51,8 @@ export function useTopDownRenderer(scene: TopDownScene) {
     if (ready) rendererRef.current?.render(scene);
   }, [ready, scene]);
 
-  const renderImperative = useCallback((s: TopDownScene) => {
-    rendererRef.current?.render(s);
+  const renderImperative = useCallback((s: TopDownScene, effects?: TopDownEffects) => {
+    rendererRef.current?.render(s, effects);
   }, []);
 
   return { containerRef, renderImperative };

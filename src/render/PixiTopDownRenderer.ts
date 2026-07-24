@@ -19,13 +19,14 @@ import { GOAL_HALF_WIDTH } from '@/engine/balance/shot';
 import { hairColour, skinColour } from './athlete';
 import { heightPx, projectGround, topDownCamera, unprojectGround } from './topdown';
 import type { TopDownCamera, Viewport } from './topdown';
-import type { Figure, Kit, TopDownScene } from './topdownScene';
+import type { Figure, Kit, TopDownEffects, TopDownScene } from './topdownScene';
 
 const GRASS_DARK = '#166b3d';
 const GRASS_LIGHT = '#1c7a45';
 const LINE = 0xf1f7f3;
 const GOAL_FRAME = 0xf6faf8;
 const SHADOW = 0x061206;
+const OUTLINE = 0x0a1508;
 
 const ARROW_COLOUR: Record<string, number> = {
   shot: 0x7ddba4,
@@ -40,12 +41,18 @@ export class PixiTopDownRenderer {
   private app: Application | null = null;
   private viewport: Viewport = { width: 390, height: 780 };
 
+  /** Everything on the pitch lives in `world`, so camera shake moves it all. */
+  private readonly world = new Container();
   private readonly grass = new Graphics();
   private readonly markings = new Graphics();
   private readonly shadows = new Graphics();
+  private readonly turf = new Graphics();
+  private readonly trail = new Graphics();
   private readonly actors = new Container();
   private readonly ball = new Graphics();
   private readonly arrow = new Graphics();
+  /** The goal flash sits outside `world`, so it fills the frame while it shakes. */
+  private readonly flash = new Graphics();
 
   /**
    * Mounts into a container element. Pixi creates and owns its own canvas —
@@ -69,7 +76,17 @@ export class PixiTopDownRenderer {
       autoDensity: true,
     });
 
-    app.stage.addChild(this.grass, this.markings, this.shadows, this.actors, this.ball, this.arrow);
+    this.world.addChild(
+      this.grass,
+      this.markings,
+      this.shadows,
+      this.turf,
+      this.trail,
+      this.actors,
+      this.ball,
+      this.arrow,
+    );
+    app.stage.addChild(this.world, this.flash);
     app.canvas.style.width = '100%';
     app.canvas.style.height = '100%';
     app.canvas.style.display = 'block';
@@ -95,17 +112,62 @@ export class PixiTopDownRenderer {
     this.app?.renderer.render(this.app.stage);
   }
 
-  render(scene: TopDownScene): void {
+  render(scene: TopDownScene, effects?: TopDownEffects): void {
     if (!this.app) return;
     const cam = topDownCamera(scene.focus, this.viewport);
 
+    // Camera shake moves the whole world; the flash overlay does not shake.
+    if (effects) {
+      this.world.position.set(effects.shakeX * cam.scale, effects.shakeY * cam.scale);
+    } else {
+      this.world.position.set(0, 0);
+    }
+
     this.drawGrass(cam);
-    this.drawMarkings(cam);
+    this.drawMarkings(cam, effects?.netImpact ?? null);
+    this.drawTurf(cam, effects);
     this.drawFigures(cam, scene);
+    this.drawTrail(cam, effects);
     this.drawBall(cam, scene);
     this.drawArrow(cam, scene);
+    this.drawFlash(effects);
 
     this.renderNow();
+  }
+
+  private drawTurf(cam: TopDownCamera, effects?: TopDownEffects): void {
+    const g = this.turf.clear();
+    if (!effects) return;
+    for (const speck of effects.turf) {
+      const p = projectGround({ x: speck.x, y: speck.y }, cam);
+      g.circle(p.sx, p.sy, Math.max(1, cam.scale * 0.06)).fill({
+        color: 0x0e5c33,
+        alpha: speck.alpha,
+      });
+    }
+  }
+
+  private drawTrail(cam: TopDownCamera, effects?: TopDownEffects): void {
+    const g = this.trail.clear();
+    if (!effects) return;
+    effects.trail.forEach((point, index) => {
+      const fade = 1 - index / (effects.trail.length + 1);
+      const ground = projectGround({ x: point.x, y: point.y }, cam);
+      const r = Math.max(2, cam.scale * 0.16 * fade);
+      g.circle(ground.sx, ground.sy - heightPx(point.h, cam), r).fill({
+        color: 0xf8fbf9,
+        alpha: fade * 0.35,
+      });
+    });
+  }
+
+  private drawFlash(effects?: TopDownEffects): void {
+    const g = this.flash.clear();
+    if (!effects || effects.flash <= 0) return;
+    g.rect(0, 0, this.viewport.width, this.viewport.height).fill({
+      color: 0xe8fff0,
+      alpha: effects.flash * 0.16,
+    });
   }
 
   // -------------------------------------------------------------- pitch
@@ -131,7 +193,10 @@ export class PixiTopDownRenderer {
     }
   }
 
-  private drawMarkings(cam: TopDownCamera): void {
+  private drawMarkings(
+    cam: TopDownCamera,
+    netImpact: TopDownEffects['netImpact'],
+  ): void {
     const g = this.markings.clear();
     const stroke = { width: 2, color: LINE, alpha: 0.7 };
 
@@ -155,21 +220,33 @@ export class PixiTopDownRenderer {
     const spot = projectGround({ x: 0, y: PENALTY_SPOT_Y }, cam);
     g.circle(spot.sx, spot.sy, 2).fill(LINE);
 
-    this.drawGoal(g, cam);
+    this.drawGoal(g, cam, netImpact);
   }
 
   /**
    * The goal, given a little depth: the net extends behind the line (towards
    * the top of the screen) and the frame stands up off the ground.
    */
-  private drawGoal(g: Graphics, cam: TopDownCamera): void {
+  private drawGoal(
+    g: Graphics,
+    cam: TopDownCamera,
+    netImpact: TopDownEffects['netImpact'],
+  ): void {
     const netDepth = -2; // behind the goal line
     const postHeight = 2.44;
 
+    // Where the ball hit pushes the net further back, tailing off with
+    // distance across the mouth — the ball bulging the mesh.
+    const backOffset = (x: number): number => {
+      if (!netImpact) return netDepth;
+      const d2 = (x - netImpact.at.x) ** 2;
+      return netDepth - netImpact.strength * 1.6 * Math.exp(-d2 / 2.2);
+    };
+
     const leftBase = projectGround({ x: -GOAL_HALF_WIDTH, y: 0 }, cam);
     const rightBase = projectGround({ x: GOAL_HALF_WIDTH, y: 0 }, cam);
-    const leftBack = projectGround({ x: -GOAL_HALF_WIDTH, y: netDepth }, cam);
-    const rightBack = projectGround({ x: GOAL_HALF_WIDTH, y: netDepth }, cam);
+    const leftBack = projectGround({ x: -GOAL_HALF_WIDTH, y: backOffset(-GOAL_HALF_WIDTH) }, cam);
+    const rightBack = projectGround({ x: GOAL_HALF_WIDTH, y: backOffset(GOAL_HALF_WIDTH) }, cam);
 
     // Net floor, faintly shaded so the mouth reads as a cavity.
     g.poly([
@@ -179,12 +256,12 @@ export class PixiTopDownRenderer {
       leftBack.sx, leftBack.sy,
     ]).fill({ color: 0x0a1a12, alpha: 0.55 });
 
-    // Net mesh.
+    // Net mesh, each strand pushed back by the bulge at its x.
     for (let i = 0; i <= 8; i += 1) {
       const t = i / 8;
       const x = -GOAL_HALF_WIDTH + GOAL_HALF_WIDTH * 2 * t;
       const a = projectGround({ x, y: 0 }, cam);
-      const b = projectGround({ x, y: netDepth }, cam);
+      const b = projectGround({ x, y: backOffset(x) }, cam);
       g.moveTo(a.sx, a.sy).lineTo(b.sx, b.sy);
     }
     g.stroke({ width: 1, color: LINE, alpha: 0.28 });
@@ -222,31 +299,75 @@ export class PixiTopDownRenderer {
     }
   }
 
-  /** One player: a shadow-grounded body with a head, in kit colours. */
+  /**
+   * One player, seen from above and behind.
+   *
+   * Built to read as a footballer at ~20px tall, which means a clear
+   * silhouette over decoration: shoulders wider than hips, a dark outline so
+   * the figure lifts off the grass, and a head shifted the way he faces so a
+   * pitch of players is not a field of identical backs.
+   */
   private buildFigure(figure: Figure, cam: TopDownCamera): Container {
     const c = new Container();
     const ground = projectGround(figure.at, cam);
     const lift = heightPx(figure.height ?? 0, cam);
     c.position.set(ground.sx, ground.sy - lift);
 
-    const bodyH = heightPx(1.5, cam);
-    const bodyW = cam.scale * 0.62;
+    const s = cam.scale;
+    const torsoH = heightPx(1.2, cam);
+    const shoulderW = s * 0.68;
+    const hipW = s * 0.5;
+    const outline = { width: Math.max(1, s * 0.05), color: OUTLINE, alpha: 0.5 };
+
+    // Facing, in screen space, from the figure towards what it looks at.
+    let fx = 0;
+    let fy = -1;
+    if (figure.face) {
+      const target = projectGround(figure.face, cam);
+      const dx = target.sx - ground.sx;
+      const dy = target.sy - (ground.sy - lift);
+      const len = Math.hypot(dx, dy) || 1;
+      fx = dx / len;
+      fy = dy / len;
+    }
+
     const g = new Graphics();
 
-    // Torso: a rounded jersey from the hips up.
-    g.roundRect(-bodyW / 2, -bodyH, bodyW, bodyH * 0.72, bodyW * 0.32).fill(figure.kit.primary);
-    // A shoulder band in the secondary colour, so kits read apart.
-    g.rect(-bodyW / 2, -bodyH, bodyW, bodyH * 0.16).fill(figure.kit.secondary);
-    // Shorts.
-    g.roundRect(-bodyW / 2, -bodyH * 0.34, bodyW, bodyH * 0.3, bodyW * 0.2).fill(
+    // Shorts and legs at the base.
+    g.roundRect(-hipW / 2, -torsoH * 0.36, hipW, torsoH * 0.42, hipW * 0.28)
+      .fill(figure.kit.secondary)
+      .stroke(outline);
+
+    // Torso: shoulders tapering to the hips.
+    g.moveTo(-shoulderW / 2, -torsoH)
+      .lineTo(shoulderW / 2, -torsoH)
+      .lineTo(hipW * 0.55, -torsoH * 0.3)
+      .lineTo(-hipW * 0.55, -torsoH * 0.3)
+      .closePath()
+      .fill(figure.kit.primary)
+      .stroke(outline);
+
+    // A collar dab of the secondary colour, so similar kits still separate.
+    g.roundRect(-shoulderW * 0.28, -torsoH, shoulderW * 0.56, torsoH * 0.16, torsoH * 0.06).fill(
       figure.kit.secondary,
     );
-    // Head.
-    g.circle(0, -bodyH - bodyW * 0.16, bodyW * 0.34).fill(skinColour(figure.appearance));
-    // A dab of hair on the crown, seen from above-behind.
+
+    // Head, shifted towards the facing direction so he is looking somewhere.
+    const headR = s * 0.24;
+    const headX = fx * headR * 0.35;
+    const headY = -torsoH - headR * 0.55 + fy * headR * 0.35;
+
+    // Hair sits behind the head, away from the face.
     if (figure.appearance.hairStyle !== 'bald') {
-      g.circle(0, -bodyH - bodyW * 0.24, bodyW * 0.3).fill(hairColour(figure.appearance));
+      g.circle(headX - fx * headR * 0.28, headY - fy * headR * 0.28, headR * 1.04).fill(
+        hairColour(figure.appearance),
+      );
     }
+    g.circle(headX, headY, headR).fill(skinColour(figure.appearance)).stroke({
+      width: Math.max(1, s * 0.04),
+      color: OUTLINE,
+      alpha: 0.4,
+    });
 
     c.addChild(g);
     return c;

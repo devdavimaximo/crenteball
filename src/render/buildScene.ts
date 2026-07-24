@@ -29,11 +29,20 @@ export interface BuildSceneInput {
   readonly focus?: { x: number; y: number };
 }
 
-function figure(at: { x: number; y: number }, kit: Kit, rng: Rng, number_?: number): Figure {
+const GOAL = { x: 0, y: 0 };
+
+function figure(
+  at: { x: number; y: number },
+  kit: Kit,
+  rng: Rng,
+  face: { x: number; y: number },
+  number_?: number,
+): Figure {
   return {
     at,
     kit,
     appearance: randomAppearance(rng),
+    face,
     ...(number_ === undefined ? {} : { shirtNumber: number_ }),
   };
 }
@@ -43,10 +52,12 @@ export function buildScene(input: BuildSceneInput): TopDownScene {
   const ball = input.ball ?? { at: moment.ball, height: 0 };
 
   return {
-    player: { at: moment.ball, kit: kits.player, appearance, shirtNumber: 9 },
-    teammates: moment.teammates.map((m, i) => figure(m.point, kits.player, rng, 7 + i)),
-    defenders: moment.defenders.map((d) => figure(d.point, kits.opponent, rng)),
-    keeper: figure(moment.keeper, kits.keeper, rng, 1),
+    // The player looks at the goal; the aim arrow already shows where he'll go.
+    player: { at: moment.ball, kit: kits.player, appearance, shirtNumber: 9, face: GOAL },
+    // Everyone else has their eye on the ball.
+    teammates: moment.teammates.map((m, i) => figure(m.point, kits.player, rng, moment.ball, 7 + i)),
+    defenders: moment.defenders.map((d) => figure(d.point, kits.opponent, rng, moment.ball)),
+    keeper: figure(moment.keeper, kits.keeper, rng, moment.ball, 1),
     ball: ball.at,
     ballHeight: ball.height,
     aim: input.aim ?? null,

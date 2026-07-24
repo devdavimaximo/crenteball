@@ -23,6 +23,8 @@ export interface Figure {
   readonly shirtNumber?: number;
   /** Metres above the ground — a keeper leaps, a header rises. */
   readonly height?: number;
+  /** A pitch point the figure looks towards, so he is not always facing away. */
+  readonly face?: Point;
 }
 
 /** The aim, while the player is pulling back the slingshot. */
@@ -33,6 +35,17 @@ export interface AimIndicator {
   readonly power: number;
   /** What this aim would do, so the arrow can colour itself. */
   readonly kind: ActionKind;
+}
+
+/** Per-frame impact feedback, produced by the animation sampler. */
+export interface TopDownEffects {
+  readonly trail: readonly { x: number; y: number; h: number }[];
+  readonly turf: readonly { x: number; y: number; alpha: number }[];
+  readonly netImpact: { readonly at: Point; readonly strength: number } | null;
+  /** Camera kick, in metres. */
+  readonly shakeX: number;
+  readonly shakeY: number;
+  readonly flash: number;
 }
 
 export interface TopDownScene {

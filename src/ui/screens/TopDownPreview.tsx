@@ -8,6 +8,8 @@ import { generateMatchMoment } from '@/engine/sim/spatialMoment';
 import type { KeyMomentType } from '@/engine/sim/spatialMoment';
 import { buildScene } from '@/render/buildScene';
 import { PixiTopDownRenderer } from '@/render/PixiTopDownRenderer';
+import { sampleActionAnimation } from '@/render/topdownAnimation';
+import type { ActionAnimationSpec } from '@/render/topdownAnimation';
 import type { AimIndicator } from '@/render/topdownScene';
 
 /**
@@ -62,6 +64,20 @@ export function TopDownPreview() {
       aim,
     });
 
+    // Animation-frame mode: `#topdown&anim=1&t=300` renders one deterministic
+    // frame of a goal at elapsed t, so the juice can be screenshotted.
+    const animT = /anim=1/.test(window.location.hash)
+      ? Number(/t=(\d+)/.exec(window.location.hash)?.[1] ?? 0)
+      : null;
+    const goalSpec: ActionAnimationSpec = {
+      from: moment.ball,
+      to: { x: 1.6, y: -1.4 },
+      peakHeight: 1.6,
+      outcome: 'goal',
+      goal: true,
+      power: 0.78,
+    };
+
     const renderer = new PixiTopDownRenderer();
     let disposed = false;
 
@@ -73,8 +89,32 @@ export function TopDownPreview() {
           renderer.destroy();
           return;
         }
-        renderer.render(scene);
-        // Signal readiness for the screenshot harness.
+        if (animT === null) {
+          renderer.render(scene);
+        } else {
+          const frame = sampleActionAnimation(goalSpec, animT);
+          const focus = {
+            x: moment.ball.x + (frame.ball.x - moment.ball.x) * 0.6,
+            y: moment.ball.y + (frame.ball.y - moment.ball.y) * 0.6,
+          };
+          renderer.render(
+            {
+              ...scene,
+              focus,
+              aim: null,
+              ball: { x: frame.ball.x, y: frame.ball.y },
+              ballHeight: frame.ball.h,
+            },
+            {
+              trail: frame.trail,
+              turf: frame.turf,
+              netImpact: frame.netImpact,
+              shakeX: frame.shakeX,
+              shakeY: frame.shakeY,
+              flash: frame.flash,
+            },
+          );
+        }
         container.dataset.ready = 'true';
       });
 

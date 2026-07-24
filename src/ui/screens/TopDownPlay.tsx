@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { DEFAULT_APPEARANCE } from '@/engine/domain/appearance';
 import { createRng, deriveSeed } from '@/engine/rng';
@@ -8,8 +8,10 @@ import { generateMatchMoment } from '@/engine/sim/spatialMoment';
 import type { KeyMomentType, MatchMoment } from '@/engine/sim/spatialMoment';
 import { buildScene } from '@/render/buildScene';
 import { topDownCamera } from '@/render/topdown';
+import { sampleActionAnimation } from '@/render/topdownAnimation';
 import type { AimIndicator } from '@/render/topdownScene';
 import { t } from '@/ui/i18n';
+import { animationSpecFor } from '@/ui/match/animationSpec';
 import { defaultSlingConfig, previewSling, readSling } from '@/ui/match/slingControl';
 import type { ScreenPoint } from '@/ui/match/slingControl';
 import { useTopDownRenderer } from '@/ui/match/useTopDownRenderer';
@@ -51,6 +53,8 @@ export function TopDownPlay() {
   const [result, setResult] = useState<ActionResult | null>(null);
 
   const dragStart = useRef<ScreenPoint | null>(null);
+  const animating = useRef(false);
+  const frameRef = useRef<number | null>(null);
 
   const moment: MatchMoment = useMemo(() => {
     const type = PRESETS[presetIndex % PRESETS.length] ?? 'shot';
@@ -84,7 +88,57 @@ export function TopDownPlay() {
     return { x: e.clientX - (rect?.left ?? 0), y: e.clientY - (rect?.top ?? 0) };
   };
 
+  /** Plays the ball flight, then reports the outcome to React. */
+  const playAction = (outcome: ActionResult, power: number) => {
+    animating.current = true;
+    const spec = animationSpecFor(moment.ball, outcome, power);
+    const base = buildScene({
+      moment,
+      appearance: DEFAULT_APPEARANCE,
+      kits: KITS,
+      rng: createRng(deriveSeed(7, presetIndex)),
+      aim: null,
+    });
+
+    const startedAt = performance.now();
+    const tick = (now: number) => {
+      const frame = sampleActionAnimation(spec, now - startedAt);
+      // Pan the camera towards the ball as it travels, so a shot reveals the
+      // goal instead of leaving it off the edge.
+      const focus = {
+        x: moment.ball.x + (frame.ball.x - moment.ball.x) * 0.6,
+        y: moment.ball.y + (frame.ball.y - moment.ball.y) * 0.6,
+      };
+      renderImperative(
+        { ...base, focus, ball: { x: frame.ball.x, y: frame.ball.y }, ballHeight: frame.ball.h },
+        {
+          trail: frame.trail,
+          turf: frame.turf,
+          netImpact: frame.netImpact,
+          shakeX: frame.shakeX,
+          shakeY: frame.shakeY,
+          flash: frame.flash,
+        },
+      );
+      if (frame.done) {
+        animating.current = false;
+        setResult(outcome);
+        return;
+      }
+      frameRef.current = requestAnimationFrame(tick);
+    };
+    frameRef.current = requestAnimationFrame(tick);
+  };
+
+  useEffect(
+    () => () => {
+      if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
+    },
+    [],
+  );
+
   const onPointerDown = (e: React.PointerEvent) => {
+    if (animating.current) return;
     if (result) {
       // Tap after a result: next situation.
       setResult(null);
@@ -96,7 +150,7 @@ export function TopDownPlay() {
   };
 
   const onPointerMove = (e: React.PointerEvent) => {
-    if (!dragStart.current || result) return;
+    if (!dragStart.current || result || animating.current) return;
     const reading = previewSling(dragStart.current, localPoint(e), cameraFor(), config);
     const kind = classifyAction(moment, { dir: reading.dir, power: reading.power });
     setAim({ dir: reading.dir, power: reading.power, kind });
@@ -106,7 +160,7 @@ export function TopDownPlay() {
     const start = dragStart.current;
     dragStart.current = null;
     setAim(null);
-    if (!start || result) return;
+    if (!start || result || animating.current) return;
 
     const reading = readSling(start, localPoint(e), cameraFor(), config);
     if (!reading) return; // cancelled pull
@@ -119,9 +173,7 @@ export function TopDownPlay() {
       createRng(deriveSeed(20260721, presetIndex, attempt)),
     );
     setAttempt((a) => a + 1);
-    setResult(outcome);
-    // Show the settled scene once (animation is slice E).
-    renderImperative(scene);
+    playAction(outcome, reading.power);
   };
 
   return (
