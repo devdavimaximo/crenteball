@@ -3,20 +3,30 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
+import { DEFAULT_APPEARANCE } from '@/engine/domain/appearance';
+import { fromUnits } from '@/engine/domain/money';
 import { createInitialState } from '@/engine/domain/state';
+import type { Contract } from '@/engine/domain/state';
+import { SCHEMA_VERSION } from '@/engine/meta';
 
 import { createEnvelope } from './envelope';
 import { loadSave } from './load';
 
-const FIXTURE_PATH = fileURLToPath(new URL('./__fixtures__/v1-fresh-career.crenteball', import.meta.url));
-
-function readFixture(): unknown {
-  return JSON.parse(readFileSync(FIXTURE_PATH, 'utf8'));
+function readFixture(name: string): unknown {
+  const path = fileURLToPath(new URL(`./__fixtures__/${name}.crenteball`, import.meta.url));
+  return JSON.parse(readFileSync(path, 'utf8'));
 }
 
-describe('loadSave — the v1 fixture (regression guard)', () => {
+const CONTRACT: Contract = {
+  leagueId: 'liga-brasil',
+  clubId: 'sao-luis-maranhense',
+  weeklyWage: fromUnits(1020),
+  untilSeason: 3,
+};
+
+describe('loadSave — the current fixture (regression guard)', () => {
   it('loads today, unmigrated', () => {
-    const result = loadSave(readFixture());
+    const result = loadSave(readFixture('v2-fresh-career'));
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.migrated).toBe(false);
   });
@@ -29,12 +39,45 @@ describe('loadSave — the v1 fixture (regression guard)', () => {
       seed: 19_700_101,
       name: 'Davi Máximo',
       position: 'FW',
-      createdAt: '2026-07-21T12:00:00.000Z',
+      appearance: DEFAULT_APPEARANCE,
+      contract: CONTRACT,
+      createdAt: '2026-07-24T12:00:00.000Z',
     });
 
-    const result = loadSave(readFixture());
+    const result = loadSave(readFixture('v2-fresh-career'));
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.state).toEqual(expected);
+  });
+});
+
+describe('loadSave — a v1 save from an older build', () => {
+  it('still loads, migrated forward', () => {
+    const result = loadSave(readFixture('v1-fresh-career'));
+    expect(result.ok, result.ok ? '' : JSON.stringify(result.error)).toBe(true);
+    if (result.ok) expect(result.migrated).toBe(true);
+  });
+
+  it('keeps everything v1 already knew about the player', () => {
+    const result = loadSave(readFixture('v1-fresh-career'));
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(result.state.seed).toBe(19_700_101);
+    expect(result.state.player.name).toBe('Davi Máximo');
+    expect(result.state.player.attributes.finishing).toBe(30);
+    expect(result.state.player.condition.energy).toBe(100);
+    expect(result.state.player.faith.devotion).toBe(40);
+    expect(result.state.finances.balance).toBe(50_000);
+  });
+
+  it('adopts him into a club, on terms the schema accepts', () => {
+    const result = loadSave(readFixture('v1-fresh-career'));
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(result.state.contract).toEqual(CONTRACT);
+    expect(result.state.player.appearance).toEqual(DEFAULT_APPEARANCE);
+    expect(result.state.player.condition.form).toBe(50);
   });
 });
 
@@ -44,6 +87,8 @@ describe('loadSave — round trip', () => {
       seed: 42,
       name: 'Teste',
       position: 'GK',
+      appearance: DEFAULT_APPEARANCE,
+      contract: CONTRACT,
       createdAt: '2026-01-01T00:00:00.000Z',
     });
 
@@ -83,7 +128,7 @@ describe('loadSave — future schema version', () => {
 
     expect(result).toEqual({
       ok: false,
-      error: { kind: 'future-schema-version', savedVersion: 999, supportedVersion: 1 },
+      error: { kind: 'future-schema-version', savedVersion: 999, supportedVersion: SCHEMA_VERSION },
     });
   });
 });
@@ -94,6 +139,8 @@ describe('loadSave — state fails domain validation', () => {
       seed: 1,
       name: 'X',
       position: 'MF',
+      appearance: DEFAULT_APPEARANCE,
+      contract: CONTRACT,
       createdAt: '2026-01-01T00:00:00.000Z',
     });
 
@@ -117,6 +164,8 @@ describe('loadSave — state fails domain validation', () => {
       seed: 1,
       name: 'X',
       position: 'DF',
+      appearance: DEFAULT_APPEARANCE,
+      contract: CONTRACT,
       createdAt: '2026-01-01T00:00:00.000Z',
     });
 

@@ -13,6 +13,14 @@ import { z } from 'zod';
 
 import { DEVOTION_MAX, DEVOTION_MIN } from '@/engine/balance/career';
 
+import {
+  BEARD_STYLES,
+  HAIR_COLOUR_COUNT,
+  HAIR_STYLES,
+  MAX_HEIGHT,
+  MIN_HEIGHT,
+  SKIN_TONE_COUNT,
+} from './appearance';
 import { ATTRIBUTE_KEYS, ATTRIBUTE_MAX, ATTRIBUTE_MIN } from './attributes';
 import { fromCents } from './money';
 import { POSITIONS } from './state';
@@ -34,6 +42,27 @@ const money = z
   .int()
   .transform((cents) => fromCents(cents));
 
+/** A balance may go negative; something the club pays out never can. */
+const income = z
+  .number()
+  .int()
+  .nonnegative()
+  .transform((cents) => fromCents(cents));
+
+/**
+ * Appearance is bounded by what the renderer can actually draw. A hand-edited
+ * save asking for skin tone 40 would otherwise reach the paper-doll and fail
+ * there, far from the file that caused it.
+ */
+const appearanceSchema = z.object({
+  skinTone: z.number().int().min(0).max(SKIN_TONE_COUNT - 1),
+  hairStyle: z.enum(HAIR_STYLES),
+  hairColour: z.number().int().min(0).max(HAIR_COLOUR_COUNT - 1),
+  beard: z.enum(BEARD_STYLES),
+  height: z.number().min(MIN_HEIGHT).max(MAX_HEIGHT),
+  build: z.number().min(0).max(1),
+});
+
 const attributesSchema = z.object(
   Object.fromEntries(ATTRIBUTE_KEYS.map((key) => [key, rating])) as Record<
     (typeof ATTRIBUTE_KEYS)[number],
@@ -49,6 +78,14 @@ const clockSchema = z.object({
 const conditionSchema = z.object({
   energy: percentage,
   morale: percentage,
+  form: percentage,
+});
+
+const contractSchema = z.object({
+  leagueId: z.string().min(1),
+  clubId: z.string().min(1),
+  weeklyWage: income,
+  untilSeason: z.number().int().positive(),
 });
 
 const faithSchema = z.object({
@@ -61,6 +98,7 @@ const playerSchema = z.object({
   name: z.string().min(1).max(40),
   position: z.enum(POSITIONS),
   age: z.number().int().min(14).max(50),
+  appearance: appearanceSchema,
   attributes: attributesSchema,
   condition: conditionSchema,
   faith: faithSchema,
@@ -71,6 +109,7 @@ export const gameStateSchema = z.object({
   createdAt: z.string().datetime(),
   clock: clockSchema,
   player: playerSchema,
+  contract: contractSchema,
   finances: z.object({ balance: money }),
 });
 

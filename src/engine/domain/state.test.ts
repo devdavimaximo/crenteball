@@ -1,14 +1,25 @@
 import { describe, expect, it } from 'vitest';
 
+import { DEFAULT_APPEARANCE } from './appearance';
 import { ATTRIBUTE_KEYS } from './attributes';
+import { fromUnits } from './money';
 import { parseGameState } from './schema';
 import { createInitialState } from './state';
-import type { GameState } from './state';
+import type { Contract, GameState } from './state';
+
+const CONTRACT: Contract = {
+  leagueId: 'liga-brasil',
+  clubId: 'sao-luis-maranhense',
+  weeklyWage: fromUnits(1020),
+  untilSeason: 3,
+};
 
 const CAREER = {
   seed: 20260721,
   name: 'Davi Máximo',
   position: 'FW',
+  appearance: DEFAULT_APPEARANCE,
+  contract: CONTRACT,
   createdAt: '2026-07-21T18:00:00.000Z',
 } as const;
 
@@ -43,6 +54,15 @@ describe('createInitialState', () => {
 
   it('keeps the seed so the career is reproducible', () => {
     expect(initial().seed).toBe(CAREER.seed);
+  });
+
+  it('starts neither in form nor out of it', () => {
+    expect(initial().player.condition.form).toBe(50);
+  });
+
+  it('carries the face and the contract it was handed', () => {
+    expect(initial().player.appearance).toEqual(DEFAULT_APPEARANCE);
+    expect(initial().contract).toEqual(CONTRACT);
   });
 });
 
@@ -97,6 +117,22 @@ describe('parseGameState', () => {
     const broken = {
       ...state,
       player: { ...state.player, attributes: { ...state.player.attributes, pace: 140 } },
+    };
+    expect(parseGameState(broken).ok).toBe(false);
+  });
+
+  it('rejects a wage the club would be receiving instead of paying', () => {
+    const broken = { ...initial(), contract: { ...CONTRACT, weeklyWage: -5000 } };
+    const result = parseGameState(broken);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.issues.join()).toContain('contract.weeklyWage');
+  });
+
+  it('rejects an appearance the renderer could not draw', () => {
+    const state = initial();
+    const broken = {
+      ...state,
+      player: { ...state.player, appearance: { ...DEFAULT_APPEARANCE, skinTone: 40 } },
     };
     expect(parseGameState(broken).ok).toBe(false);
   });

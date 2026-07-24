@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 2,
+  "savedAt": "2026-07-24T12:00:00.000Z",
+  "state": {
+    "seed": 19700101,
+    "createdAt": "2026-07-24T12:00:00.000Z",
+    "clock": { "season": 1, "week": 1 },
+    "player": {
+      "id": "player-19700101",
+      "name": "Davi Máximo",
+      "position": "FW",
+      "age": 17,
+      "appearance": {
+        "skinTone": 2,
+        "hairStyle": "short",
+        "hairColour": 0,
+        "beard": "none",
+        "height": 1.8,
+        "build": 0.5
+      },
+      "attributes": {
+        "finishing": 30,
+        "passing": 30,
+        "dribbling": 30,
+        "pace": 30,
+        "defending": 30,
+        "physical": 30
+      },
+      "condition": { "energy": 100, "morale": 60, "form": 50 },
+      "faith": { "devotion": 40, "lastDevotionalWeek": null }
+    },
+    "contract": {
+      "leagueId": "liga-brasil",
+      "clubId": "sao-luis-maranhense",
+      "weeklyWage": 102000,
+      "untilSeason": 3
+    },
+    "finances": { "balance": 50000 }
+  }
+}

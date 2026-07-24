@@ -4,18 +4,27 @@ import 'fake-indexeddb/auto';
 
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { createInitialState } from '@/engine/domain/state';
+import { LIGA_BRASIL } from '@/content';
+import { DEFAULT_APPEARANCE } from '@/engine/domain/appearance';
+import { createAttributes } from '@/engine/domain/attributes';
 import { SCHEMA_VERSION } from '@/engine/meta';
+import { firstClubRngFor, startCareer } from '@/engine/systems/career';
 
 import { AUTO_SLOT, db } from './db';
 import { deleteSave, listSaves, readSave, writeSave } from './saves';
 
-const STATE = createInitialState({
-  seed: 7,
-  name: 'Davi Máximo',
-  position: 'FW',
-  createdAt: '2026-07-21T12:00:00.000Z',
-});
+const STATE = startCareer(
+  {
+    seed: 7,
+    name: 'Davi Máximo',
+    position: 'FW',
+    appearance: DEFAULT_APPEARANCE,
+    createdAt: '2026-07-21T12:00:00.000Z',
+    attributes: createAttributes(30),
+  },
+  LIGA_BRASIL,
+  firstClubRngFor(7),
+);
 
 const SAVED_AT = '2026-07-21T15:30:00.000Z';
 

@@ -1,15 +1,27 @@
 import { describe, expect, it } from 'vitest';
 
-import { createInitialState } from '@/engine/domain/state';
+import { LIGA_BRASIL } from '@/content';
+import { DEFAULT_APPEARANCE } from '@/engine/domain/appearance';
+import { createAttributes } from '@/engine/domain/attributes';
+import { SCHEMA_VERSION } from '@/engine/meta';
+import { firstClubRngFor, startCareer } from '@/engine/systems/career';
 
 import { parseSaveFile, serializeSaveFile, suggestFileName } from './file';
 
-const STATE = createInitialState({
-  seed: 99,
-  name: 'Davi Máximo',
-  position: 'MF',
-  createdAt: '2026-07-21T12:00:00.000Z',
-});
+// A real career rather than a hand-built state: what goes through a file is
+// what the game actually produces.
+const STATE = startCareer(
+  {
+    seed: 99,
+    name: 'Davi Máximo',
+    position: 'MF',
+    appearance: DEFAULT_APPEARANCE,
+    createdAt: '2026-07-21T12:00:00.000Z',
+    attributes: createAttributes(30),
+  },
+  LIGA_BRASIL,
+  firstClubRngFor(99),
+);
 
 const SAVED_AT = '2026-07-21T15:30:00.000Z';
 
@@ -24,7 +36,7 @@ describe('export → import round trip', () => {
 
   it('produces human-readable, pretty-printed JSON', () => {
     const text = serializeSaveFile(STATE, SAVED_AT);
-    expect(text).toContain('\n  "schemaVersion": 1');
+    expect(text).toContain(`\n  "schemaVersion": ${String(SCHEMA_VERSION)}`);
   });
 });
 

@@ -10,6 +10,7 @@
  */
 import type { Seed } from '@/engine/rng';
 
+import type { Appearance } from './appearance';
 import type { Attributes } from './attributes';
 import { createAttributes } from './attributes';
 import type { Money } from './money';
@@ -21,6 +22,7 @@ import {
   STARTING_BALANCE,
   STARTING_DEVOTION,
   STARTING_ENERGY,
+  STARTING_FORM,
   STARTING_MORALE,
 } from '@/engine/balance/career';
 
@@ -33,10 +35,34 @@ export interface Clock {
   readonly week: number;
 }
 
-/** Percentages, 0..100. Both recover; neither is permanent. */
+/**
+ * Percentages, 0..100. None of the three is permanent.
+ *
+ * `energy` is spent by matches and training and comes back with rest;
+ * `morale` answers to results and to life off the pitch; `form` is the shorter
+ * memory of how the last few games actually went. They are kept apart because
+ * a player can be exhausted and confident, or fresh and out of touch.
+ */
 export interface Condition {
   readonly energy: number;
   readonly morale: number;
+  readonly form: number;
+}
+
+/**
+ * The deal that puts him in a shirt.
+ *
+ * Holds the club rather than the state holding it separately: for this game
+ * there is no such thing as a club without a contract, and a single source
+ * removes the possibility of the two disagreeing. `untilSeason` is inclusive —
+ * a contract signed in season 1 for three seasons expires after season 3.
+ */
+export interface Contract {
+  readonly leagueId: string;
+  readonly clubId: string;
+  /** Paid every week of the season, in cents. */
+  readonly weeklyWage: Money;
+  readonly untilSeason: number;
 }
 
 /**
@@ -59,6 +85,8 @@ export interface Player {
   readonly name: string;
   readonly position: Position;
   readonly age: number;
+  /** Parameters, never colours — the renderer decides what they look like. */
+  readonly appearance: Appearance;
   readonly attributes: Attributes;
   readonly condition: Condition;
   readonly faith: Faith;
@@ -75,6 +103,7 @@ export interface GameState {
   readonly createdAt: string;
   readonly clock: Clock;
   readonly player: Player;
+  readonly contract: Contract;
   readonly finances: Finances;
 }
 
@@ -82,6 +111,9 @@ export interface NewCareer {
   readonly seed: Seed;
   readonly name: string;
   readonly position: Position;
+  readonly appearance: Appearance;
+  /** Which club took him in, and on what terms. See systems/career. */
+  readonly contract: Contract;
   /** ISO 8601. Injected rather than read from the clock, so creation is pure. */
   readonly createdAt: string;
   /** Points added on top of the base, per attribute. Validated by the caller. */
@@ -92,7 +124,9 @@ export interface NewCareer {
  * Builds the opening state of a career.
  *
  * Pure: same input, same state. No `Date.now()`, no `Math.random()` — both
- * would make saves untestable and careers irreproducible.
+ * would make saves untestable and careers irreproducible. Choosing the club
+ * and the wage is not its job: that needs the league and an Rng, and lives in
+ * `systems/career`.
  */
 export function createInitialState(career: NewCareer): GameState {
   const base = createAttributes(STARTING_ATTRIBUTE);
@@ -106,10 +140,16 @@ export function createInitialState(career: NewCareer): GameState {
       name: career.name,
       position: career.position,
       age: STARTING_AGE,
+      appearance: career.appearance,
       attributes: { ...base, ...career.attributes },
-      condition: { energy: STARTING_ENERGY, morale: STARTING_MORALE },
+      condition: {
+        energy: STARTING_ENERGY,
+        morale: STARTING_MORALE,
+        form: STARTING_FORM,
+      },
       faith: { devotion: STARTING_DEVOTION, lastDevotionalWeek: null },
     },
+    contract: career.contract,
     finances: { balance: STARTING_BALANCE },
   };
 }
