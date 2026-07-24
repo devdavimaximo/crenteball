@@ -5,6 +5,7 @@ import { ServiceWorkerPrompt } from '@/ui/components/ServiceWorkerPrompt';
 import { t } from '@/ui/i18n';
 import { MatchPrototype } from '@/ui/screens/MatchPrototype';
 import { ShotPlayground } from '@/ui/screens/ShotPlayground';
+import { TopDownPreview } from '@/ui/screens/TopDownPreview';
 
 /**
  * Hash-based switching, deliberately primitive. A router earns its place when
@@ -28,6 +29,7 @@ function useHash(): string {
 function Screen({ hash }: { hash: string }) {
   if (hash === '#partida' || hash === '#match') return <MatchPrototype />;
   if (hash === '#treino' || hash === '#shot' || hash === '#render') return <ShotPlayground />;
+  if (hash.startsWith('#topdown')) return <TopDownPreview />;
 
   return (
     <main className="relative flex min-h-full flex-col items-center justify-center px-6 text-center text-white">
