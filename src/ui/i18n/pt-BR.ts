@@ -40,6 +40,12 @@ export const ptBR = {
   'match.moment.save': 'Defesa!',
 
   'match.devotionLab': 'Intimidade com Deus (teste)',
+  'match.pull': 'Puxe para trás e solte',
+  'match.outcome.pass': 'Bom passe!',
+  'match.outcome.passFail': 'Interceptado',
+  'match.outcome.cross': 'Cruzou!',
+  'match.outcome.assist': 'Assistência!',
+  'match.assists': 'Assistências',
 
   'shot.hint': 'Deslize da bola em direção ao gol',
   'shot.again': 'Toque para tentar de novo',

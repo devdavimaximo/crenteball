@@ -23,13 +23,14 @@ import {
   TEAMMATE_GOAL_SHARE,
   TIGHT_GAME_PRESSURE,
 } from '@/engine/balance/playerMatch';
+import type { KeyMomentType } from '@/engine/balance/keyMoments';
 import type { Position } from '@/engine/domain/state';
 import type { Rng, Seed } from '@/engine/rng';
 import { createRng, deriveSeed } from '@/engine/rng';
 import { poisson } from '@/engine/rng/distributions';
-import { generateKeyMoments } from '@/engine/sim/keyMoments';
-import type { KeyMoment } from '@/engine/sim/keyMoments';
 import { expectedGoals } from '@/engine/sim/match';
+import { generateMatchMoments } from '@/engine/sim/spatialMoment';
+import type { MatchMoment } from '@/engine/sim/spatialMoment';
 
 export const MATCH_MINUTES = 90;
 
@@ -43,7 +44,7 @@ export interface PlayerMatchSetup {
 }
 
 export interface PlannedMatch {
-  readonly moments: readonly KeyMoment[];
+  readonly moments: readonly MatchMoment[];
   /** Minutes his teammates scored, ascending. */
   readonly teammateGoalMinutes: readonly number[];
   /** Minutes the opposition scored, ascending. */
@@ -60,7 +61,7 @@ function goalMinutes(count: number, rng: Rng): number[] {
 }
 
 export function planMatch(setup: PlayerMatchSetup, rng: Rng): PlannedMatch {
-  const moments = generateKeyMoments(
+  const moments = generateMatchMoments(
     {
       position: setup.position,
       teamStrength: setup.teamStrength,
@@ -121,7 +122,8 @@ export function finalScore(
 export function pressureFor(
   plan: PlannedMatch,
   playerGoalMinutes: readonly number[],
-  moment: KeyMoment,
+  // Only the minute and type bear on pressure, so any moment-shaped value fits.
+  moment: { readonly minute: number; readonly type: KeyMomentType },
 ): number {
   const score = scoreAt(plan, playerGoalMinutes, moment.minute);
   const margin = Math.abs(score.team - score.opponent);

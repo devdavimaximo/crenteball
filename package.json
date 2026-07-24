@@ -7,7 +7,6 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "preview": "vite-node scripts/preview-scene.ts",
     "preview:topdown": "node scripts/shoot-topdown.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
