@@ -5,6 +5,7 @@ import { ServiceWorkerPrompt } from '@/ui/components/ServiceWorkerPrompt';
 import { t } from '@/ui/i18n';
 import { MatchPrototype } from '@/ui/screens/MatchPrototype';
 import { ShotPlayground } from '@/ui/screens/ShotPlayground';
+import { TopDownPlay } from '@/ui/screens/TopDownPlay';
 import { TopDownPreview } from '@/ui/screens/TopDownPreview';
 
 /**
@@ -29,6 +30,7 @@ function useHash(): string {
 function Screen({ hash }: { hash: string }) {
   if (hash === '#partida' || hash === '#match') return <MatchPrototype />;
   if (hash === '#treino' || hash === '#shot' || hash === '#render') return <ShotPlayground />;
+  if (hash.startsWith('#jogar')) return <TopDownPlay />;
   if (hash.startsWith('#topdown')) return <TopDownPreview />;
 
   return (
